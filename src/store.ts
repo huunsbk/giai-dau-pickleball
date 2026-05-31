@@ -21,6 +21,8 @@ interface AppState {
   manualQualifiedTeamIds: string[];
   events: Record<string, EventData>;
   currentEventId: string;
+  isAdmin: boolean;
+  setAdminStatus: (status: boolean) => void;
 
   // Actions
   updateTournament: (t: Partial<Tournament>) => void;
@@ -221,8 +223,20 @@ export const useTournamentStore = create<AppState>()(
           }
         },
         currentEventId: 'event-default',
+        isAdmin: typeof window !== 'undefined' ? (localStorage.getItem('pickleball_admin_auth') === 'true') : false,
+        setAdminStatus: (status: boolean) => {
+          if (typeof window !== 'undefined') {
+            if (status) {
+              localStorage.setItem('pickleball_admin_auth', 'true');
+            } else {
+              localStorage.removeItem('pickleball_admin_auth');
+            }
+          }
+          set({ isAdmin: status });
+        },
 
         updateTournament: (t) => {
+          if (!get().isAdmin) return;
           set((state) => {
             const updated = { ...state.tournament, ...t };
             return { tournament: updated };
@@ -231,6 +245,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateSettings: (s) => {
+          if (!get().isAdmin) return;
           set((state) => {
             const updatedSettings = { ...state.tournament.settings, ...s };
             const updated = { ...state.tournament, settings: updatedSettings };
@@ -240,6 +255,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         addEvent: (name) => {
+          if (!get().isAdmin) return;
           const id = `event-${Math.random().toString(36).substring(2, 9)}`;
           const trimmedName = name.trim() || 'Nội dung mới';
           set((state) => {
@@ -264,6 +280,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         deleteEvent: (id) => {
+          if (!get().isAdmin) return;
           const event = get().events[id];
           if (!event) return;
           
@@ -290,6 +307,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         renameEvent: (id, newName) => {
+          if (!get().isAdmin) return;
           const trimmed = newName.trim();
           if (!trimmed) return;
           const oldName = get().events[id]?.name || id;
@@ -314,6 +332,9 @@ export const useTournamentStore = create<AppState>()(
         },
 
         addTeam: (name, seed) => {
+          if (!get().isAdmin) {
+            return { success: false, message: 'Yêu cầu quyền Admin để thêm đội.' };
+          }
           const trimmedName = name.trim();
           if (!trimmedName) {
             return { success: false, message: 'Tên đội không được rỗng.' };
@@ -343,6 +364,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         deleteTeam: (id) => {
+          if (!get().isAdmin) return;
           const team = get().teams[id];
           if (!team) return;
 
@@ -378,6 +400,9 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateTeam: (id, name, seed) => {
+          if (!get().isAdmin) {
+            return { success: false, message: 'Yêu cầu quyền Admin để sửa thông tin đội.' };
+          }
           const trimmedName = name.trim();
           if (!trimmedName) {
             return { success: false, message: 'Tên đội không được rỗng.' };
@@ -405,6 +430,9 @@ export const useTournamentStore = create<AppState>()(
         },
 
         importTeams: (csvContent) => {
+          if (!get().isAdmin) {
+            return { success: false, addedCount: 0, errors: ['Yêu cầu quyền Admin để nhập danh sách từ file.'] };
+          }
           if (!csvContent.trim()) {
             return { success: false, addedCount: 0, errors: ['Nội dung file trống.'] };
           }
@@ -484,6 +512,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         setupGroups: (numGroups) => {
+          if (!get().isAdmin) return;
           if (numGroups < 1 || numGroups > 12) return;
 
           set((state) => {
@@ -522,6 +551,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         autoGroupTeams: (method, numGroups) => {
+          if (!get().isAdmin) return;
           if (numGroups < 1 || numGroups > 12) return;
           const allTeams = Object.values(get().teams);
           if (allTeams.length === 0) return;
@@ -594,6 +624,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         moveTeamToGroup: (teamId, targetGroupId) => {
+          if (!get().isAdmin) return;
           const team = get().teams[teamId];
           if (!team) return;
 
@@ -644,6 +675,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         clearAllGroups: () => {
+          if (!get().isAdmin) return;
           set((state) => {
             const nextGroups: Record<string, Group> = {};
             const nextTeams = { ...state.teams };
@@ -666,6 +698,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         generateMatchesForGroup: (groupId) => {
+          if (!get().isAdmin) return;
           const group = get().groups[groupId];
           if (!group || group.teamIds.length === 0) return;
 
@@ -690,6 +723,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         clearMatchesForGroup: (groupId) => {
+          if (!get().isAdmin) return;
           const group = get().groups[groupId];
           set((state) => ({
             matches: state.matches.filter((m) => m.groupId !== groupId),
@@ -700,6 +734,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateMatchScore: (matchId, scoreA, scoreB) => {
+          if (!get().isAdmin) return;
           set((state) => {
             const matchesCopy = state.matches.map((m) => {
               if (m.id !== matchId) return m;
@@ -737,6 +772,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         resetMatchScore: (matchId) => {
+          if (!get().isAdmin) return;
           const m = get().matches.find((x) => x.id === matchId);
           set((state) => {
             const matchesCopy = state.matches.map((x) => {
@@ -753,6 +789,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         generateAllSchedules: () => {
+          if (!get().isAdmin) return;
           set((state) => {
             const nextEvents = { ...state.events };
             const settings = state.tournament.settings;
@@ -795,6 +832,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         generateKnockoutBracket: (size) => {
+          if (!get().isAdmin) return;
           // 1. Tính toán bảng xếp hạng của các bảng
           const standingsByGroup: Record<string, GroupStanding[]> = {};
           const groupsMap = get().groups;
@@ -971,6 +1009,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateKnockoutScore: (matchId, scoreA, scoreB) => {
+          if (!get().isAdmin) return;
           set((state) => {
             // Tìm trận đấu và cập nhật kết quả
             const updatedMatches = state.matches.map((m) => {
@@ -1032,6 +1071,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateKnockoutParticipant: (matchId, slot, teamNameOrId) => {
+          if (!get().isAdmin) return;
           set((state) => {
             const updated = state.matches.map((m) => {
               if (m.id !== matchId) return m;
@@ -1060,6 +1100,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         clearKnockout: () => {
+          if (!get().isAdmin) return;
           set((state) => ({
             matches: state.matches.filter((m) => m.groupId !== 'knockout'),
           }));
@@ -1070,10 +1111,12 @@ export const useTournamentStore = create<AppState>()(
         setSelectedTab: (tab) => set({ selectedTab: tab }),
         setActiveGroupId: (id) => set({ activeGroupId: id }),
         setAdvanceSelectionMode: (mode) => {
+          if (!get().isAdmin) return;
           set({ advanceSelectionMode: mode });
           logToStore('Tuyển chọn', `Thay đổi chế độ tuyển chọn vòng trong thành: ${mode === 'auto' ? 'Tự động' : 'Tích chọn thủ công'}`);
         },
         toggleManualQualifiedTeam: (teamId) => {
+          if (!get().isAdmin) return;
           set((state) => {
             const current = state.manualQualifiedTeamIds || [];
             const isExist = current.includes(teamId);
@@ -1085,14 +1128,19 @@ export const useTournamentStore = create<AppState>()(
           logToStore('Tuyển chọn', `Thay đổi trạng thái đấu thủ "${tName}" thành ${status}.`);
         },
         clearManualQualifiedTeams: () => {
+          if (!get().isAdmin) return;
           set({ manualQualifiedTeamIds: [] });
           logToStore('Tuyển chọn', `Xóa toàn bộ lựa chọn vé đi tiếp thủ công.`);
         },
 
         addLog: (action, details) => logToStore(action, details),
-        clearLogs: () => set({ logs: [] }),
+        clearLogs: () => {
+          if (!get().isAdmin) return;
+          set({ logs: [] });
+        },
 
         resetAll: () => {
+          if (!get().isAdmin) return;
           set({
             tournament: DEFAULT_TOURNAMENT,
             teams: {},

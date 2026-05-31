@@ -15,6 +15,7 @@ export default function GroupManager() {
     autoGroupTeams,
     moveTeamToGroup,
     clearAllGroups,
+    isAdmin,
   } = useTournamentStore();
 
   const [numGroups, setNumGroups] = useState(4);
@@ -67,6 +68,16 @@ export default function GroupManager() {
 
   return (
     <div className="space-y-4.5" id="group-manager-view">
+
+      {!isAdmin && (
+        <div className="bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 text-amber-800 dark:text-amber-400 text-xs p-3.5 rounded-xl flex items-start gap-2.5 shadow-xs transition-all duration-300 animate-pulse">
+          <AlertCircle size={16} className="text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="font-extrabold text-sm flex items-center gap-1.5">Trạng thái: Chỉ Xem (Khách vãng lai)</p>
+            <p className="text-[11px] font-semibold opacity-90">Hãy nhấp vào nút <strong>🔒 Đăng nhập Admin</strong> ở góc trên bên phải để kích hoạt chức năng chia bảng tự động, kéo thả và giải tán bảng đấu.</p>
+          </div>
+        </div>
+      )}
       
       {/* Thanh cấu hình (Bự, Dễ Đọc, Tương Phản) */}
       <div className="bg-white dark:bg-zinc-900 p-4.5 rounded-xl border border-zinc-200 dark:border-zinc-800 space-y-4 shadow-xs">
@@ -86,8 +97,9 @@ export default function GroupManager() {
             <select
               value={numGroups}
               onChange={(e) => setNumGroups(Number(e.target.value))}
-              className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-extrabold text-zinc-900 dark:text-zinc-100 bg-white dark:bg-zinc-900 focus:outline-none cursor-pointer"
+              className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-extrabold text-zinc-900 dark:text-zinc-100 bg-white dark:bg-zinc-900 focus:outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               id="select-num-groups"
+              disabled={!isAdmin}
             >
               {[2, 3, 4, 5, 6, 8, 10, 12].map((n) => (
                 <option key={n} value={n}>
@@ -102,32 +114,36 @@ export default function GroupManager() {
         <div className="flex flex-wrap gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800/40">
           <button
             onClick={() => handleAutoGroup('seed')}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-lg transition-all flex items-center gap-1.5 text-xs cursor-pointer shadow-sm uppercase tracking-wider hover:scale-[1.01]"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-lg transition-all flex items-center gap-1.5 text-xs cursor-pointer shadow-sm uppercase tracking-wider hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-blue-600"
             id="btn-group-seed"
+            disabled={!isAdmin}
           >
             <Sparkles size={14} className="stroke-[2]" /> Tự Động Chia Bảng (Hạt Giống)
           </button>
           
           <button
             onClick={() => handleAutoGroup('random')}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-750 dark:text-white dark:hover:bg-emerald-650 text-white font-black rounded-lg transition-all flex items-center gap-1.5 text-xs cursor-pointer shadow-sm uppercase tracking-wider hover:scale-[1.01]"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-750 dark:text-white dark:hover:bg-emerald-650 text-white font-black rounded-lg transition-all flex items-center gap-1.5 text-xs cursor-pointer shadow-sm uppercase tracking-wider hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-emerald-600"
             id="btn-group-random"
+            disabled={!isAdmin}
           >
             <Shuffle size={14} /> Chia Ngẫu Nhiên
           </button>
 
           <button
             onClick={handleCreateGroupsEmpty}
-            className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-805 dark:text-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 font-extrabold rounded-lg transition-all text-xs cursor-pointer uppercase tracking-wider"
+            className="px-4 py-2 bg-zinc-105 hover:bg-zinc-200 dark:bg-zinc-805 dark:text-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 font-extrabold rounded-lg transition-all text-xs cursor-pointer uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
             id="btn-group-empty"
+            disabled={!isAdmin}
           >
             Tạo Bảng Đấu Trống
           </button>
 
           <button
             onClick={() => setShowClearConfirm(true)}
-            className="px-4 py-2 hover:bg-red-50 dark:hover:bg-red-955/15 text-red-650 font-black rounded-lg transition-all text-xs cursor-pointer ml-auto border border-red-200/50 dark:border-red-900/30 uppercase tracking-widest flex items-center gap-1"
+            className="px-4 py-2 hover:bg-red-50 dark:hover:bg-red-955/15 text-red-650 font-black rounded-lg transition-all text-xs cursor-pointer ml-auto border border-red-200/50 dark:border-red-900/30 uppercase tracking-widest flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             id="btn-clear-groups"
+            disabled={!isAdmin}
           >
             <Trash2 size={14} /> Giải Tán Bảng
           </button>
@@ -137,25 +153,23 @@ export default function GroupManager() {
         <div className="flex items-start gap-2.5 p-3 bg-amber-50 dark:bg-amber-955/20 border border-amber-200/50 dark:border-amber-900/40 rounded-lg text-yellow-850 dark:text-yellow-400">
           <AlertCircle size={15} className="shrink-0 mt-0.5 text-amber-500" />
           <p className="text-[11px] leading-relaxed font-semibold">
-            LƯU Ý ĐỒNG BỘ: Việc phân chia bảng, đổi hạt giống hoặc kéo thả chuyển bảng sẽ tự động xóa sạch lịch thi đấu và điểm số cũ của bảng đấu đó để bảo đảm an toàn dữ liệu. Nhớ nhấn "Tạo lại lịch đấu" sau khi tinh chỉnh danh sách bảng hoàn thiện!
+            LƯU Ý ĐỒNG BỘ: Việc phân chia bảng, đổi hạt giống hoặc kéo thả chuyển bảng sẽ tự động xóa sạch lịch thi đấu và điểm số cũ của bảng đấu đó để bốc thăm và xếp lịch thi đấu vòng mới.
           </p>
         </div>
       </div>
 
-      {/* Grid điều hướng Layout 4 cột chính */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 pb-1">
-        
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Đội chưa chia bảng */}
         <div
           onDragOver={handleDragOver}
           onDrop={(e) => handleDrop(e, null)}
-          className="lg:col-span-1 bg-zinc-100/65 dark:bg-zinc-950 p-4 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-850 space-y-2.5 min-h-[250px] shadow-inner"
+          className="lg:col-span-1 bg-zinc-100/65 dark:bg-zinc-950 p-4 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-855 space-y-2.5 min-h-[250px] shadow-inner"
           id="unassigned-teams-panel"
         >
           <div>
             <h4 className="text-xs font-black text-zinc-900 dark:text-zinc-100 flex items-center justify-between uppercase">
               <span>Chờ Chia Bảng</span>
-              <span className="py-0.5 px-1.5 bg-blue-105 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 rounded-full text-[10px] font-black">
+              <span className="py-0.5 px-1.5 bg-blue-105 text-blue-800 dark:bg-blue-955/60 dark:text-blue-300 rounded-full text-[10px] font-black">
                 {unassignedTeams.length} đội
               </span>
             </h4>
@@ -171,14 +185,14 @@ export default function GroupManager() {
               unassignedTeams.map((team) => (
                 <div
                   key={team.id}
-                  draggable
+                  draggable={isAdmin}
                   onDragStart={(e) => handleDragStart(e, team.id)}
-                  className="p-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-805 rounded-lg shadow-xs cursor-grab hover:border-blue-500 hover:ring-1 hover:ring-blue-500/20 dark:hover:border-blue-500 transition-all flex items-center justify-between font-semibold"
+                  className={`p-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-805 rounded-lg shadow-xs hover:border-blue-500 hover:ring-1 hover:ring-blue-500/20 dark:hover:border-blue-500 transition-all flex items-center justify-between font-semibold ${isAdmin ? "cursor-grab" : "cursor-default opacity-85"}`}
                 >
                   <div className="truncate pr-1.5">
                     <p className="text-xs font-black text-zinc-850 dark:text-zinc-100 truncate">{team.name}</p>
                     {team.seed !== 'none' && (
-                      <span className="inline-block mt-0.5 text-[9px] bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 font-extrabold px-1.5 py-0.5 rounded border border-amber-200/50">
+                      <span className="inline-block mt-0.5 text-[9px] bg-amber-50 text-amber-700 dark:bg-amber-955/40 dark:text-amber-400 font-extrabold px-1.5 py-0.5 rounded border border-amber-200/50">
                         Seed {team.seed}
                       </span>
                     )}
@@ -191,7 +205,8 @@ export default function GroupManager() {
                       if (val) moveTeamToGroup(team.id, val);
                     }}
                     value=""
-                    className="p-1 px-1.5 text-[10px] font-bold border border-zinc-200 dark:border-zinc-800 rounded bg-zinc-50 dark:bg-zinc-950 text-zinc-650 dark:text-zinc-400 cursor-pointer focus:outline-none"
+                    className="p-1 px-1.5 text-[10px] font-bold border border-zinc-200 dark:border-zinc-800 rounded bg-zinc-50 dark:bg-zinc-950 text-zinc-650 dark:text-zinc-400 cursor-pointer focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
+                    disabled={!isAdmin}
                   >
                     <option value="" disabled>Gán...</option>
                     {groupList.map((g) => (
@@ -221,12 +236,12 @@ export default function GroupManager() {
                   key={group.id}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, group.id)}
-                  className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 hover:border-blue-400 dark:hover:border-indigo-800 transition-all shadow-md space-y-5 flex flex-col justify-between"
+                  className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 hover:border-blue-400 dark:hover:border-indigo-805 transition-all shadow-md space-y-5 flex flex-col justify-between"
                   id={`panel-group-${group.id}`}
                 >
                   <div className="space-y-4">
                     <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
-                      <span className="text-sm font-black text-blue-800 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 py-1 px-3 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                      <span className="text-sm font-black text-blue-800 dark:text-blue-300 bg-blue-50 dark:bg-blue-955/60 py-1 px-3 rounded-lg border border-blue-100 dark:border-blue-900/30">
                         {group.name}
                       </span>
                       <span className="text-xs text-zinc-400 font-bold uppercase tracking-wider">
@@ -243,7 +258,7 @@ export default function GroupManager() {
                         groupTeams.map((team) => (
                           <div
                             key={team.id}
-                            draggable
+                            draggable={isAdmin}
                             onDragStart={(e) => handleDragStart(e, team.id)}
                             className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-850 rounded-xl hover:border-blue-500 dark:hover:border-blue-500 transition-all flex items-center justify-between pointer-events-auto cursor-grab"
                           >
@@ -263,7 +278,8 @@ export default function GroupManager() {
                                 moveTeamToGroup(team.id, val === "unassigned" ? null : val);
                               }}
                               value={group.id}
-                              className="p-0.5 text-[9px] font-black border border-zinc-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 text-zinc-550 dark:text-zinc-400 cursor-pointer focus:outline-none"
+                              disabled={!isAdmin}
+                              className="p-0.5 text-[9px] font-black border border-zinc-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 text-zinc-550 dark:text-zinc-400 cursor-pointer focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <option value="unassigned">Rời nhóm</option>
                               {groupList.map((g) => (
@@ -292,7 +308,7 @@ export default function GroupManager() {
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-md w-full p-6.5 shadow-2xl space-y-4">
             
             <div className="flex items-center gap-3.5 text-red-650">
-              <div className="p-3 bg-red-50 dark:bg-red-950/50 rounded-2xl">
+              <div className="p-3 bg-red-50 dark:bg-red-955/40 rounded-2xl">
                 <Trash2 size={24} className="stroke-[2.5]" />
               </div>
               <div>
@@ -316,7 +332,7 @@ export default function GroupManager() {
               
               <button
                 onClick={handleClearGroupsConfirm}
-                className="px-6 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-500 rounded-xl shadow-md cursor-pointer uppercase tracking-wider"
+                className="px-6 py-2.5 text-xs font-bold text-white bg-red-650 hover:bg-red-500 rounded-xl shadow-md cursor-pointer uppercase tracking-wider"
                 id="btn-confirm-clear"
               >
                 Giải Tán Sạch Bảng Đấu

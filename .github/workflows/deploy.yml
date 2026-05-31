@@ -1,0 +1,52 @@
+# Workflow tự động build và deploy lên GitHub Pages bằng GitHub Actions
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+# Quyền hạn cần thiết để deploy lên GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Giới hạn chỉ chạy 1 hàng đợi deploy tại một thời điểm
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout mã nguồn
+        uses: actions/checkout@v4
+      
+      - name: Cài đặt Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Cài đặt thư viện
+        run: npm ci || npm install
+
+      - name: Xây dựng dự án (Vite Build)
+        run: npm run build
+
+      - name: Cấu hình GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Tải lực lượng tệp tin build (dist) lên Artifacts
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+      - name: Tiến hành Deploy lên GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -9,7 +9,7 @@ import { Trash2, Edit2, Plus, Upload, FileType, Check, AlertCircle, Sparkles, He
 import { SeedType } from '../types';
 
 export default function TeamManager() {
-  const { teams, addTeam, deleteTeam, updateTeam, importTeams, addLog } = useTournamentStore();
+  const { teams, addTeam, deleteTeam, updateTeam, importTeams, addLog, isAdmin } = useTournamentStore();
   const [newTeamName, setNewTeamName] = useState('');
   const [newSeed, setNewSeed] = useState<SeedType>('none');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -148,6 +148,16 @@ export default function TeamManager() {
 
   return (
     <div className="space-y-4" id="team-manager-view">
+
+      {!isAdmin && (
+        <div className="bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 text-amber-800 dark:text-amber-400 text-xs p-3.5 rounded-xl flex items-start gap-2.5 shadow-xs transition-all duration-300 animate-pulse">
+          <AlertCircle size={16} className="text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="font-extrabold text-sm flex items-center gap-1.5">Trạng thái: Chỉ Xem (Khách vãng lai)</p>
+            <p className="text-[11px] font-semibold opacity-90">Vui lòng nhấp vào nút <strong>🔒 Đăng nhập Admin</strong> ở góc trên bên phải để bắt đầu thêm đội, sửa đổi, xếp bảng và nhập điểm số.</p>
+          </div>
+        </div>
+      )}
       
       {/* Toast thông báo siêu sắc nét */}
       {notification.message && (
@@ -181,11 +191,12 @@ export default function TeamManager() {
                 <label className="block text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Tên Đội / Đấu Thủ</label>
                 <input
                   type="text"
-                  placeholder="Nhập tên CLB hoặc tên cặp đấu..."
+                  placeholder={isAdmin ? "Nhập tên CLB hoặc tên cặp đấu..." : "Yêu cầu quyền Admin..."}
                   value={newTeamName}
                   onChange={(e) => setNewTeamName(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-xs font-semibold transition-all focus:shadow-xs"
+                  className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-xs font-semibold transition-all focus:shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   required
+                  disabled={!isAdmin}
                 />
               </div>
 
@@ -194,7 +205,8 @@ export default function TeamManager() {
                 <select
                   value={newSeed}
                   onChange={(e) => setNewSeed(e.target.value as SeedType)}
-                  className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-xs font-black cursor-pointer shadow-xs"
+                  className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-xs font-black cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!isAdmin}
                 >
                   <option value="none">Không hạt giống (Unseeded)</option>
                   <option value="1">Hạt giống số 1 (Seed 1)</option>
@@ -209,8 +221,9 @@ export default function TeamManager() {
 
               <button
                 type="submit"
-                className="w-full py-2 bg-blue-600 hover:bg-blue-500 hover:scale-[1.01] active:scale-[0.99] text-white font-black rounded-lg transition-all shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer uppercase tracking-wider"
+                className="w-full py-2 bg-blue-600 hover:bg-blue-500 hover:scale-[1.01] active:scale-[0.99] text-white font-black rounded-lg transition-all shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600 disabled:scale-100"
                 id="btn-add-team"
+                disabled={!isAdmin}
               >
                 <Plus size={15} className="stroke-[2.5]" /> 
                 Thêm Vào Danh Sách
@@ -237,16 +250,22 @@ export default function TeamManager() {
                 <FileType size={14} className="text-blue-500" /> Tải File Excel Mẫu (.csv)
               </button>
 
-              <label className="w-full py-2 bg-emerald-50 hover:bg-emerald-100/80 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-250 dark:border-emerald-800 rounded-lg transition-all font-extrabold flex items-center justify-center gap-1.5 text-xs cursor-pointer shadow-xs uppercase tracking-wider">
-                <Upload size={14} /> Nhập Danh Sách Có Sẵn
-                <input
-                  type="file"
-                  accept=".csv,.txt"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </label>
+              {isAdmin ? (
+                <label className="w-full py-2 bg-emerald-50 hover:bg-emerald-100/80 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-250 dark:border-emerald-800 rounded-lg transition-all font-extrabold flex items-center justify-center gap-1.5 text-xs cursor-pointer shadow-xs uppercase tracking-wider">
+                  <Upload size={14} /> Nhập Danh Sách Có Sẵn
+                  <input
+                    type="file"
+                    accept=".csv,.txt"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </label>
+              ) : (
+                <div className="w-full py-2 bg-zinc-100 text-zinc-400 dark:bg-zinc-800/50 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-800 rounded-lg font-extrabold flex items-center justify-center gap-1.5 text-xs cursor-not-allowed uppercase tracking-wider">
+                  <Upload size={14} /> Khóa tính năng nhập File
+                </div>
+              )}
             </div>
           </div>
 
@@ -261,17 +280,19 @@ export default function TeamManager() {
             </p>
             <div className="space-y-2">
               <textarea
-                placeholder="Dán các hàng tên đội tại đây..."
+                placeholder={isAdmin ? "Dán các hàng tên đội tại đây..." : "Yêu cầu quyền Admin để dán..."}
                 rows={3}
                 value={excelPasteText}
                 onChange={(e) => setExcelPasteText(e.target.value)}
-                className="w-full p-2.5 border border-zinc-200 dark:border-zinc-805 rounded-lg text-xs font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-2.5 border border-zinc-200 dark:border-zinc-805 rounded-lg text-xs font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 id="textarea-excel-paste"
+                disabled={!isAdmin}
               />
               <button
                 onClick={handleImportFromExcelText}
-                className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 text-xs cursor-pointer shadow-sm uppercase tracking-wide"
+                className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 text-xs cursor-pointer shadow-sm uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
                 id="btn-import-excel-paste"
+                disabled={!isAdmin}
               >
                 Nhập danh sách dán vào
               </button>
@@ -317,12 +338,12 @@ export default function TeamManager() {
               <div className="overflow-x-auto rounded-lg border border-zinc-100 dark:border-zinc-805">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-zinc-50/70 dark:bg-zinc-850/60 border-b border-zinc-200 dark:border-zinc-800">
+                    <tr className="bg-zinc-55/70 dark:bg-zinc-850/60 border-b border-zinc-200 dark:border-zinc-800">
                       <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">STT</th>
                       <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Tên Đội Đấu</th>
                       <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Hạt Giống</th>
                       <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Vòng Bảng</th>
-                      <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">Thao Tác</th>
+                      {isAdmin && <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">Thao Tác</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-850">
@@ -389,46 +410,48 @@ export default function TeamManager() {
                           </td>
 
                           {/* Thao Tác */}
-                          <td className="py-2 px-4 text-right">
-                            {isEditing ? (
-                              <div className="flex items-center justify-end gap-1.5">
-                                <button
-                                  onClick={handleSaveEdit}
-                                  className="p-1 px-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black rounded-md cursor-pointer transition-all shadow-xs"
-                                  id={`btn-save-edit-${team.id}`}
-                                >
-                                  Lưu
-                                </button>
-                                <button
-                                  onClick={() => setEditingId(null)}
-                                  className="p-1 px-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 text-zinc-700 rounded-md text-[11px] font-bold cursor-pointer"
-                                >
-                                  Hủy
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-end gap-3 text-zinc-400">
-                                <button
-                                  onClick={() => handleStartEdit(team.id, team.name, team.seed)}
-                                  className="hover:text-blue-500 transition-colors p-0.5 cursor-pointer"
-                                  title="Sửa thông tin"
-                                  id={`btn-edit-${team.id}`}
-                                >
-                                  <Edit2 size={14} className="stroke-[2.5]" />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setTeamToDelete({ id: team.id, name: team.name });
-                                  }}
-                                  className="hover:text-red-500 transition-colors p-0.5 cursor-pointer"
-                                  title="Xóa ngay đấu thủ"
-                                  id={`btn-delete-${team.id}`}
-                                >
-                                  <Trash2 size={14} className="stroke-[2.5]" />
-                                </button>
-                              </div>
-                            )}
-                          </td>
+                          {isAdmin && (
+                            <td className="py-2 px-4 text-right">
+                              {isEditing ? (
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    onClick={handleSaveEdit}
+                                    className="p-1 px-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black rounded-md cursor-pointer transition-all shadow-xs"
+                                    id={`btn-save-edit-${team.id}`}
+                                  >
+                                    Lưu
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingId(null)}
+                                    className="p-1 px-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-305 text-zinc-700 rounded-md text-[11px] font-bold cursor-pointer"
+                                  >
+                                    Hủy
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-end gap-3 text-zinc-400">
+                                  <button
+                                    onClick={() => handleStartEdit(team.id, team.name, team.seed)}
+                                    className="hover:text-blue-500 transition-colors p-0.5 cursor-pointer"
+                                    title="Sửa thông tin"
+                                    id={`btn-edit-${team.id}`}
+                                  >
+                                    <Edit2 size={14} className="stroke-[2.5]" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setTeamToDelete({ id: team.id, name: team.name });
+                                    }}
+                                    className="hover:text-red-500 transition-colors p-0.5 cursor-pointer"
+                                    title="Xóa ngay đấu thủ"
+                                    id={`btn-delete-${team.id}`}
+                                  >
+                                    <Trash2 size={14} className="stroke-[2.5]" />
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          )}
                         </tr>
                       );
                     })}

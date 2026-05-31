@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
-    base: '/giai-dau-pickleball/',
+    base: process.env.VERCEL ? '/' : '/PIC_HUU/',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

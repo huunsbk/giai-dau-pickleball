@@ -38,7 +38,25 @@ export default function App() {
     setDarkMode,
     selectedTab,
     setSelectedTab,
+    isAdmin,
+    setAdminStatus,
   } = useTournamentStore();
+
+  const ADMIN_PASSWORD = 'admin123';
+
+  const handleAdminAuth = () => {
+    if (isAdmin) {
+      setAdminStatus(false);
+    } else {
+      const passwordInput = prompt('Vui lòng nhập mật khẩu Admin để cấu hình giải đấu:');
+      if (passwordInput === null) return;
+      if (passwordInput === ADMIN_PASSWORD) {
+        setAdminStatus(true);
+      } else {
+        alert('Mật khẩu chưa chính xác. Bạn vẫn đang ở vai trò khách vãng lai (Chỉ xem).');
+      }
+    }
+  };
 
   // Áp dụng lớp .dark lên thẻ HTML chính của Toàn giải
   useEffect(() => {
@@ -155,6 +173,29 @@ export default function App() {
               <span className="bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-350 px-2 py-0.5 rounded-md font-bold text-[10px] border border-emerald-250">
                 ● Trực Tiếp
               </span>
+              <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800"></span>
+
+              {isAdmin ? (
+                <div className="flex items-center gap-2">
+                  <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-350 px-2 py-0.5 rounded-md font-bold text-[10px] border border-emerald-300 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-550 animate-ping"></span>
+                    Quyền: Admin
+                  </span>
+                  <button
+                    onClick={handleAdminAuth}
+                    className="cursor-pointer text-[10px] font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-red-600 dark:text-red-400 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded transition-colors"
+                  >
+                    Đăng xuất
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleAdminAuth}
+                  className="cursor-pointer text-[10px] font-bold bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded border border-blue-700 shadow-xs flex items-center gap-1 transition-all"
+                >
+                  🔒 Đăng nhập Admin
+                </button>
+              )}
             </div>
           </header>
 

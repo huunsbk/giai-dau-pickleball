@@ -18,6 +18,7 @@ export default function KnockoutBracket() {
     updateKnockoutScore,
     updateKnockoutParticipant,
     addLog,
+    isAdmin,
   } = useTournamentStore();
 
   const [sz, setSz] = useState<4 | 8 | 16 | 32>(4);
@@ -131,6 +132,16 @@ export default function KnockoutBracket() {
 
   return (
     <div className="space-y-8" id="knockout-bracket-view">
+
+      {!isAdmin && (
+        <div className="bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 text-amber-800 dark:text-amber-400 text-xs p-3.5 rounded-xl flex items-start gap-2.5 shadow-xs transition-all duration-300 animate-pulse">
+          <AlertTriangle size={16} className="text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+          <div className="space-y-0.5 animate-none">
+            <p className="font-extrabold text-sm flex items-center gap-1.5">Trạng thái: Chỉ Xem (Khách vãng lai)</p>
+            <p className="text-[11px] font-semibold opacity-90">Hãy nhấp vào nút <strong>🔒 Đăng nhập Admin</strong> ở góc trên bên phải để bắt đầu thiết lập sơ đồ trực tiếp, xóa nhánh hoặc nhập điểm số đấu loại loại trực tiếp.</p>
+          </div>
+        </div>
+      )}
       
       {/* Thẻ điều khiển lập nhánh (To Rõ, Đầy Đủ Chức Năng) */}
       <div className="bg-white dark:bg-zinc-900 p-7 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-md">
@@ -149,7 +160,8 @@ export default function KnockoutBracket() {
             <select
               value={sz}
               onChange={(e) => setSz(Number(e.target.value) as 4 | 8 | 16 | 32)}
-              className="px-4 py-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-black text-zinc-800 dark:text-zinc-100 bg-zinc-55 dark:bg-zinc-950 cursor-pointer"
+              disabled={!isAdmin}
+              className="px-4 py-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-black text-zinc-800 dark:text-zinc-100 bg-zinc-55 dark:bg-zinc-950 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value={4}>Nhánh 4 đội (Bán Kết - 2 bảng)</option>
               <option value={8}>Nhánh 8 đội (Tứ Kết)</option>
@@ -158,7 +170,8 @@ export default function KnockoutBracket() {
             </select>
             <button
               onClick={handleGenerateBracket}
-              className="px-5 py-3 hover:bg-blue-500 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 bg-blue-600 text-white font-black rounded-xl text-xs transition-all flex items-center gap-2 shadow-md uppercase tracking-wider cursor-pointer"
+              disabled={!isAdmin}
+              className="px-5 py-3 hover:bg-blue-500 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 bg-blue-600 text-white font-black rounded-xl text-xs transition-all flex items-center gap-2 shadow-md uppercase tracking-wider cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               id="btn-generate-knockout"
             >
               <PlayCircle size={16} /> Khởi tạo sơ đồ nhánh
@@ -167,7 +180,8 @@ export default function KnockoutBracket() {
         ) : (
           <button
             onClick={() => setShowClearConfirmModal(true)}
-            className="px-5 py-3 text-xs font-black bg-red-50 hover:bg-red-100 dark:bg-red-955/40 text-red-650 dark:text-red-400 rounded-xl cursor-pointer border border-red-250 transition-colors uppercase tracking-wider shadow-xs"
+            disabled={!isAdmin}
+            className="px-5 py-3 text-xs font-black bg-red-50 hover:bg-red-100 dark:bg-red-955/40 text-red-650 dark:text-red-400 rounded-xl cursor-pointer border border-red-250 transition-colors uppercase tracking-wider shadow-xs disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-55"
             id="btn-delete-knockout"
           >
             Hủy & Tạo Lại Sơ Đồ
@@ -256,7 +270,8 @@ export default function KnockoutBracket() {
                                     <select
                                       value={m.teamAId}
                                       onChange={(e) => updateKnockoutParticipant(m.id, 'A', e.target.value)}
-                                      className="px-2 py-1.5 font-black rounded-lg border border-zinc-250 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-[230px] cursor-pointer"
+                                      disabled={!isAdmin}
+                                      className="px-2 py-1.5 font-black rounded-lg border border-zinc-250 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-[230px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                       style={m.id === 'ko-QF1-ww7imxn' ? { width: '300px', maxWidth: 'none' } : undefined}
                                     >
                                       {/* Thêm option placeholder nếu chưa nằm trong list đội giải */}
@@ -290,7 +305,8 @@ export default function KnockoutBracket() {
                                   placeholder=""
                                   value={localScores[m.id]?.scoreA ?? ''}
                                   onChange={(e) => handleScoreInputChange(m.id, 'A', e.target.value)}
-                                  className="w-12 h-9 border border-zinc-250 dark:border-zinc-800 rounded-xl text-center font-bold text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white"
+                                  disabled={!isAdmin}
+                                  className="w-12 h-9 border border-zinc-250 dark:border-zinc-800 rounded-xl text-center font-bold text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                   id={`input-ko-match-${m.id}-scoreA`}
                                 />
                               </div>
@@ -302,7 +318,8 @@ export default function KnockoutBracket() {
                                     <select
                                       value={m.teamBId}
                                       onChange={(e) => updateKnockoutParticipant(m.id, 'B', e.target.value)}
-                                      className="px-2 py-1.5 font-black rounded-lg border border-zinc-250 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-[230px] cursor-pointer"
+                                      disabled={!isAdmin}
+                                      className="px-2 py-1.5 font-black rounded-lg border border-zinc-250 bg-white dark:bg-zinc-900 text-[#111c30] dark:text-zinc-105 text-xs focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-[230px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                       style={m.id === 'ko-QF1-ww7imxn' ? { width: '300px', maxWidth: 'none' } : undefined}
                                     >
                                       {!teamNames.includes(m.teamBId) && (
@@ -335,7 +352,8 @@ export default function KnockoutBracket() {
                                   placeholder=""
                                   value={localScores[m.id]?.scoreB ?? ''}
                                   onChange={(e) => handleScoreInputChange(m.id, 'B', e.target.value)}
-                                  className="w-12 h-9 border border-zinc-250 dark:border-zinc-800 rounded-xl text-center font-bold text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white"
+                                  disabled={!isAdmin}
+                                  className="w-12 h-9 border border-zinc-250 dark:border-zinc-800 rounded-xl text-center font-bold text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                   id={`input-ko-match-${m.id}-scoreB`}
                                 />
                               </div>

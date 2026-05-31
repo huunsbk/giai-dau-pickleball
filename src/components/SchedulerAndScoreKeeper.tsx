@@ -35,6 +35,7 @@ export default function SchedulerAndScoreKeeper() {
     addLog,
     events,
     currentEventId,
+    isAdmin,
   } = useTournamentStore();
 
   const groupList = Object.values(groups);
@@ -328,6 +329,16 @@ export default function SchedulerAndScoreKeeper() {
 
   return (
     <div className="space-y-6" id="scheduler-and-scorekeeper-unified">
+
+      {!isAdmin && (
+        <div className="bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 text-amber-800 dark:text-amber-400 text-xs p-3.5 rounded-xl flex items-start gap-2.5 shadow-xs transition-all duration-300 animate-pulse">
+          <AlertTriangle size={16} className="text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="font-extrabold text-sm flex items-center gap-1.5">Trạng thái: Chỉ Xem (Khách vãng lai)</p>
+            <p className="text-[11px] font-semibold opacity-90">Hãy đăng nhập quyền <strong>🔒 Đăng nhập Admin</strong> ở góc trên bên phải để bắt đầu xếp lịch thi đấu toàn giải, nhập tỉ số, cập nhật điểm hoặc đặt lại kết quả bảng tròn.</p>
+          </div>
+        </div>
+      )}
       
       {/* HEADER SECTION: "Lịch & Kết quả" & "In dữ liệu / PDF" */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 print:hidden" id="match-scoring-header-main">
@@ -351,7 +362,7 @@ export default function SchedulerAndScoreKeeper() {
           </button>
           <button
             onClick={handlePrint}
-            className="px-4.5 py-2.5 bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-sm border border-zinc-200 dark:border-zinc-800 cursor-pointer transition-all"
+            className="px-4.5 py-2.5 bg-white hover:bg-zinc-55 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-sm border border-zinc-200 dark:border-zinc-800 cursor-pointer transition-all"
             id="btn-print-pdf-main"
           >
             <Printer size={15} />
@@ -391,7 +402,8 @@ export default function SchedulerAndScoreKeeper() {
                 generateAllSchedules();
                 addLog('Lập Lịch', 'Khởi tạo nhanh lịch đấu toàn giải cho tất cả các bảng và nội dung.');
               }}
-              className="px-4.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-2 cursor-pointer transition-all shadow-md uppercase tracking-wider"
+              disabled={!isAdmin}
+              className="px-4.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-2 cursor-pointer transition-all shadow-md uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-emerald-600"
               id="btn-quick-schedule-all"
             >
               <Sparkles size={14} />
@@ -399,7 +411,8 @@ export default function SchedulerAndScoreKeeper() {
             </button>
             <button
               onClick={() => setShowRegenConfirm(true)}
-              className="px-4.5 py-2.5 bg-white hover:bg-zinc-55 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-bold rounded-xl text-xs flex items-center gap-2 border border-zinc-250 dark:border-zinc-800 cursor-pointer transition-all shadow-xs"
+              disabled={!isAdmin}
+              className="px-4.5 py-2.5 bg-white hover:bg-zinc-55 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-bold rounded-xl text-xs flex items-center gap-2 border border-zinc-250 dark:border-zinc-800 cursor-pointer transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
               id="btn-trigger-regen-schedule"
             >
               <RefreshCw size={14} className="text-zinc-500" />
@@ -437,7 +450,8 @@ export default function SchedulerAndScoreKeeper() {
               
               <button
                 onClick={() => setShowResetScoresConfirm(true)}
-                className="px-3.5 py-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-955/30 border border-blue-200/50 dark:border-blue-900/40 rounded-lg cursor-pointer transition-colors"
+                disabled={!isAdmin}
+                className="px-3.5 py-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-955/30 border border-blue-200/50 dark:border-blue-900/40 rounded-lg cursor-pointer transition-colors disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 id="btn-reset-current-group-scores"
               >
                 Đặt lại điểm bảng này
@@ -447,12 +461,13 @@ export default function SchedulerAndScoreKeeper() {
             {/* List Round-by-Round or direct matches list */}
             {groupMatches.length === 0 ? (
               <div className="py-20 text-center text-zinc-400 bg-white dark:bg-zinc-900 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800 space-y-4 shadow-sm">
-                <Sparkles size={48} className="mx-auto text-zinc-300 dark:text-zinc-700" />
+                <Sparkles size={48} className="mx-auto text-zinc-300 dark:text-zinc-700 block" />
                 <p className="font-extrabold text-zinc-750 dark:text-zinc-300">CHƯA KHỞI TẠO LỊCH THI ĐẤU</p>
                 <p className="text-xs text-zinc-500 font-medium max-w-xs mx-auto">Nhấp vào nút để tự động thiết lập trận đấu vòng tròn cho {activeGroup.name} ngay lập tức.</p>
                 <button
                   onClick={handleRegenSubmit}
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs cursor-pointer shadow-sm uppercase tracking-wide"
+                  disabled={!isAdmin}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs cursor-pointer shadow-sm uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Nhấp Tạo Lịch Ngay!
                 </button>
@@ -523,7 +538,8 @@ export default function SchedulerAndScoreKeeper() {
                                     placeholder=""
                                     value={scoreAVal}
                                     onChange={(e) => handleScoreInputChange(match.id, 'A', e.target.value)}
-                                    className="w-13 h-10 border border-zinc-250 dark:border-zinc-800 rounded-xl text-center font-bold text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white"
+                                    disabled={!isAdmin}
+                                    className="w-13 h-10 border border-zinc-250 dark:border-zinc-800 rounded-xl text-center font-bold text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                                     id={`input-match-${match.id}-scoreA`}
                                   />
                                   
@@ -538,7 +554,8 @@ export default function SchedulerAndScoreKeeper() {
                                     placeholder=""
                                     value={scoreBVal}
                                     onChange={(e) => handleScoreInputChange(match.id, 'B', e.target.value)}
-                                    className="w-13 h-10 border border-zinc-250 dark:border-zinc-800 rounded-xl text-center font-bold text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white"
+                                    disabled={!isAdmin}
+                                    className="w-13 h-10 border border-zinc-250 dark:border-zinc-800 rounded-xl text-center font-bold text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                                     id={`input-match-${match.id}-scoreB`}
                                   />
                                 </div>

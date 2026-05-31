@@ -24,7 +24,8 @@ export default function EventBar() {
     addEvent, 
     deleteEvent, 
     renameEvent, 
-    setCurrentEvent 
+    setCurrentEvent,
+    isAdmin
   } = useTournamentStore();
 
   const [isAdding, setIsAdding] = useState(false);
@@ -143,40 +144,42 @@ export default function EventBar() {
                 >
                   <span className="truncate max-w-[120px]">{evt.name}</span>
                   
-                  {/* Icon chỉnh sửa / xóa hiển thị khi hover (hoặc luôn hiện trên di động) */}
-                  <div className={`flex items-center gap-1 ${isActive ? 'opacity-90' : 'opacity-0 group-hover:opacity-100 transition-opacity'}`}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEditing(evt.id, evt.name);
-                      }}
-                      className={`p-0.5 rounded transition-colors ${
-                        isActive ? 'hover:bg-blue-500 text-white' : 'hover:bg-zinc-200 dark:hover:bg-zinc-750 text-zinc-500'
-                      }`}
-                      title="Đổi tên nội dung"
-                    >
-                      <Edit3 size={11} />
-                    </button>
-                    {eventList.length > 1 && (
+                  {/* Icon chỉnh sửa / xóa hiển thị khi hoever (hoặc luôn hiện trên di động) */}
+                  {isAdmin && (
+                    <div className={`flex items-center gap-1 ${isActive ? 'opacity-90' : 'opacity-0 group-hover:opacity-100 transition-opacity'}`}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setDeletingId(evt.id);
+                          startEditing(evt.id, evt.name);
                         }}
                         className={`p-0.5 rounded transition-colors ${
-                          isActive ? 'hover:bg-red-700 text-red-200' : 'hover:bg-red-50 dark:hover:bg-red-950/20 text-red-550'
+                          isActive ? 'hover:bg-blue-500 text-white' : 'hover:bg-zinc-200 dark:hover:bg-zinc-750 text-zinc-500'
                         }`}
-                        title="Xóa nội dung"
+                        title="Đổi tên nội dung"
                       >
-                        <Trash2 size={11} />
+                        <Edit3 size={11} />
                       </button>
-                    )}
-                  </div>
+                      {eventList.length > 1 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingId(evt.id);
+                          }}
+                          className={`p-0.5 rounded transition-colors ${
+                            isActive ? 'hover:bg-red-700 text-red-200' : 'hover:bg-red-50 dark:hover:bg-red-955/20 text-red-550'
+                          }`}
+                          title="Xóa nội dung"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </motion.div>
               );
             })}
 
-            {isAdding ? (
+            {isAdmin && (isAdding ? (
               <motion.form
                 key="add-form"
                 layoutId="add-button"
@@ -201,7 +204,7 @@ export default function EventBar() {
                 <button
                   type="button"
                   onClick={() => setIsAdding(false)}
-                  className="p-1 hover:bg-red-150 dark:hover:bg-red-950/50 text-red-600 rounded cursor-pointer"
+                  className="p-1 hover:bg-red-150 dark:hover:bg-red-955/50 text-red-650 rounded cursor-pointer"
                   title="Hủy"
                 >
                   <X size={14} className="stroke-[2.5]" />
@@ -216,7 +219,7 @@ export default function EventBar() {
               >
                 <Plus size={13} className="stroke-[2.5]" /> Thêm nội dung
               </motion.button>
-            )}
+            ))}
           </AnimatePresence>
         </div>
 
