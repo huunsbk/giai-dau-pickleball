@@ -93,7 +93,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-sm font-black tracking-tight text-white leading-tight uppercase font-display flex items-center gap-1">
-                PickleMgr Pro
+                NGUYỄN VĂN HỮU
               </h1>
               <p className="text-[9px] text-slate-400 font-medium tracking-wide">Điều Hành Giải Chuyên Nghiệp</p>
             </div>
