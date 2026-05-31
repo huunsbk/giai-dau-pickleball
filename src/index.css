@@ -1,0 +1,323 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --animate-fade-in: fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@variant dark (&:where(.dark, .dark *));
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+body {
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* --- ADVANCED SPORT CHRONICLE GLOBAL THEME REDESIGN --- 
+   Designed by a 10-year experienced sports media & graphics UI designer.
+   Balanced spacing, highly coordinated high-contrast labels, and 2-4px larger typography. */
+
+/* Clean line-heights with snug but professional typography spacing to prevent overlapping or layout bugs */
+html, body, p, span, h1, h2, h3, h4, h5, h6, select, input, button, textarea, label {
+  line-height: 1.35 !important;
+  margin-top: 0px !important;
+}
+
+/* Perfecting athletic snug paddings dynamically */
+.py-1   { padding-top: 3px !important; padding-bottom: 3px !important; }
+.py-1\.5 { padding-top: 4px !important; padding-bottom: 4px !important; }
+.py-2   { padding-top: 6px !important; padding-bottom: 6px !important; }
+.py-2\.5 { padding-top: 7px !important; padding-bottom: 7px !important; }
+.py-3   { padding-top: 8px !important; padding-bottom: 8px !important; }
+.py-3\.5 { padding-top: 10px !important; padding-bottom: 10px !important; }
+.py-4   { padding-top: 12px !important; padding-bottom: 12px !important; }
+.py-5   { padding-top: 14px !important; padding-bottom: 14px !important; }
+.py-6   { padding-top: 16px !important; padding-bottom: 16px !important; }
+
+.pt-1   { padding-top: 3px !important; }
+.pt-1\.5 { padding-top: 4px !important; }
+.pt-2   { padding-top: 6px !important; }
+.pt-2\.5 { padding-top: 7px !important; }
+.pt-3   { padding-top: 8px !important; }
+.pt-4   { padding-top: 12px !important; }
+.pt-5   { padding-top: 14px !important; }
+.pt-6   { padding-top: 16px !important; }
+
+.pb-1   { padding-bottom: 3px !important; }
+.pb-1\.5 { padding-bottom: 4px !important; }
+.pb-2   { padding-bottom: 6px !important; }
+.pb-2\.5 { padding-bottom: 7px !important; }
+.pb-3   { padding-bottom: 8px !important; }
+.pb-4   { padding-bottom: 12px !important; }
+.pb-5   { padding-bottom: 14px !important; }
+.pb-6   { padding-bottom: 16px !important; }
+
+/* Tighten layout gaps between sister blocks to avoid hollow spaces */
+.space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 4px !important; }
+.space-y-1\.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 6px !important; }
+.space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top: 8px !important; }
+.space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 10px !important; }
+.space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 12px !important; }
+.space-y-5 > :not([hidden]) ~ :not([hidden]) { margin-top: 14px !important; }
+.space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 16px !important; }
+
+/* Dynamic athletic grids with cohesive layout borders */
+.gap-6 { gap: 18px !important; }
+.gap-4 { gap: 12px !important; }
+
+/* Professional high-contrast typographic scales: increased by 2-4px everywhere for readability */
+.text-\[8px\]  { font-size: 11px !important; font-weight: 800 !important; tracking: uppercase; }
+.text-\[9px\]  { font-size: 13px !important; font-weight: 800 !important; tracking: uppercase; }
+.text-\[10px\] { font-size: 14px !important; font-weight: 800 !important; }
+.text-\[11px\] { font-size: 15px !important; font-weight: 850 !important; }
+.text-xs       { font-size: 16px !important; font-weight: 850 !important; }
+.text-sm       { font-size: 18px !important; font-weight: 850 !important; }
+.text-base     { font-size: 20px !important; font-weight: 900 !important; }
+.text-lg       { font-size: 22px !important; font-weight: 900 !important; }
+.text-xl       { font-size: 26px !important; font-weight: 900 !important; }
+.text-2xl      { font-size: 32px !important; font-weight: 950 !important; }
+.text-3xl      { font-size: 38px !important; font-weight: 950 !important; letter-spacing: -0.02em; }
+
+/* Bold headers, tables headers, and tags */
+strong, b, th, h1, h2, h3, h4, h5, h6 {
+  font-weight: 900 !important;
+  font-family: var(--font-display), "Inter", sans-serif;
+  letter-spacing: -0.015em;
+}
+
+/* Beautiful color coordination: Navy / Deep Charcoal bases for superb athletic clarity in light mode */
+.text-zinc-400, .text-slate-400, .text-zinc-430, .text-zinc-450, .text-zinc-500, .text-slate-500 {
+  color: #1e293b !important; /* Premium Navy slate gray */
+  font-weight: 800 !important;
+}
+html.dark .text-zinc-400, html.dark .text-slate-400, html.dark .text-zinc-430, html.dark .text-zinc-450, html.dark .text-zinc-500, html.dark .text-slate-500 {
+  color: #cbd5e1 !important; /* Glowing silver-slate in dark */
+}
+
+/* Extreme contrast text readability */
+.text-zinc-650, .text-zinc-700, .text-zinc-600, .text-slate-600, .text-zinc-800 {
+  color: #0f172a !important; /* Deep sport navy black */
+  font-weight: 850 !important;
+}
+html.dark .text-zinc-650, html.dark .text-zinc-700, html.dark .text-zinc-600, html.dark .text-slate-600, html.dark .text-zinc-800 {
+  color: #f8fafc !important; /* Ultimate crisp white */
+}
+
+/* Emerald green state and success indicators: Pickleball/Tennis Court Green vibe */
+.text-emerald-600, .text-emerald-700, .text-emerald-800, .text-emerald-400 {
+  color: #0f766e !important; /* Premium cyan teal */
+  font-weight: 900 !important;
+}
+html.dark .text-emerald-600, html.dark .text-emerald-700, html.dark .text-emerald-800, html.dark .text-emerald-400 {
+  color: #10b981 !important; /* Deep live lime */
+}
+
+/* Imperial Blue Primary */
+.text-blue-600, .text-blue-700, .text-blue-800, .text-blue-400 {
+  color: #1d4ed8 !important; /* Deep athletic team blue */
+  font-weight: 900 !important;
+}
+html.dark .text-blue-600, html.dark .text-blue-700, html.dark .text-blue-800, html.dark .text-blue-400 {
+  color: #60a5fa !important;
+}
+
+/* Orange and amber dynamic states */
+.text-amber-500, .text-amber-600, .text-amber-700 {
+  color: #b45309 !important; /* Beautiful deep gold */
+  font-weight: 900 !important;
+}
+html.dark .text-amber-500, html.dark .text-amber-600, html.dark .text-amber-700 {
+  color: #fbbf24 !important;
+}
+
+/* Interactive elements: sport-themed borders, crisp dropdown selectors, deep interactive padding */
+input, select, textarea {
+  font-weight: 850 !important;
+  border-width: 2px !important;
+  border-color: #94a3b8 !important; /* Visible classy slate */
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  border-radius: 8px !important;
+  outline: none !important;
+}
+html.dark input, html.dark select, html.dark textarea {
+  border-color: #475569 !important;
+  background-color: #111827 !important;
+  color: #f8fafc !important;
+}
+
+/* High contrast premium sport card styling & shadow accents */
+.bg-white {
+  background-color: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
+}
+html.dark .bg-zinc-900, html.dark .bg-zinc-950, html.dark .bg-white {
+  background-color: #111c30 !important;
+  border: 1.5px solid #1e293b !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Table styling for classic tournament match grids */
+table th {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  font-weight: 900 !important;
+  font-size: 15px !important;
+}
+html.dark table th {
+  background-color: #1e293b !important;
+  color: #cbd5e1 !important;
+}
+
+tr {
+  border-bottom: 1.5px solid #f1f5f9 !important;
+}
+html.dark tr {
+  border-bottom: 1.5px solid #1e293b !important;
+}
+
+/* Layout wrapping container: expands perfectly */
+#main-content-panel {
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+  
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Reset any dark theme backgrounds and styles during print for max contrast */
+  .dark, .dark *, html.dark, html.dark body, html.dark #main-content-panel {
+    background: #ffffff !important;
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  /* Specific color-contrast adjustments under print */
+  span, p, h1, h2, h3, h4, h5, h6, strong, b, div, td, th {
+    color: #000000 !important;
+    text-shadow: none !important;
+  }
+
+  /* Keep basic badge shapes recognizable using light gray/blue tones */
+  .bg-blue-600, .bg-indigo-600, .bg-blue-50, .bg-zinc-100, .bg-zinc-50 {
+    background-color: #f1f5f9 !important;
+    color: #1e3a8a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .text-blue-600, .text-indigo-600, .text-indigo-800 {
+    color: #1d4ed8 !important;
+    font-weight: bold !important;
+  }
+
+  .text-emerald-600, .bg-emerald-600, .bg-emerald-50 {
+    color: #0f766e !important;
+    background-color: #f0fdf4 !important;
+  }
+
+  .text-amber-500, .bg-amber-50, .bg-amber-100 {
+    color: #b45309 !important;
+    background-color: #fef3c7 !important;
+  }
+
+  * {
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  header, footer, nav, aside, .print\:hidden, button, select, input, label, textarea {
+    display: none !important;
+  }
+
+  main, #standings-view, #bracket-view, #main-content-panel {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    transform: none !important;
+  }
+
+  /* Prevent grid squishing: change 3-column / 2-column group views to single-column full-width listings */
+  #tv-all-events-view .grid,
+  #tv-single-event-view .grid,
+  .grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+  }
+
+  /* Expand max-height blocks so scrollable elements are fully printed instead of clipped */
+  [class*="max-h-"], 
+  [class*="overflow-y-"], 
+  .max-h-\[350px\], 
+  .max-h-\[550px\], 
+  .overflow-y-auto {
+    max-height: none !important;
+    overflow: visible !important;
+    overflow-y: visible !important;
+  }
+
+  /* Prevent text truncation - make long team names and matchups wrap cleanly */
+  [class*="truncate"], 
+  .truncate, 
+  .text-ellipsis {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: none !important;
+    width: auto !important;
+    word-break: break-word !important;
+  }
+
+  /* Relax any restrictive width limitations on team names so everything displays fully */
+  [class*="max-w-"] {
+    max-width: none !important;
+  }
+
+  .break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Prevent general visual card boundaries from clipping during page breaks */
+  .bg-white, .rounded-3xl, .rounded-2xl, .border, .p-5, .p-6, .grid > div {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  td, th {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
+}

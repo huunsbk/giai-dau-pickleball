@@ -1,0 +1,8 @@
+{
+  "name": "BẢN QUYỀN THUỘC VỀ NGUYỄN VĂN HỮU",
+  "description": "Bản quyền thuộc về Nguyễn Văn Hữu_Ngân Sơn.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
