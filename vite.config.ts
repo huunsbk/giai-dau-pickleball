@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
+    base: '/giai-dau-pickleball/',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
