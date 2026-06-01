@@ -99,201 +99,253 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
   const errors: string[] = [];
   try {
     const tournamentId = state.tournament.id || 't-1';
-    
-    // 1. Sync Tournament Metadata
-    const { error: tErr } = await supabase.from('tournament').upsert({
-      id: tournamentId,
-      name: state.tournament.name,
-      organization: state.tournament.organization,
-      location: state.tournament.location,
-      date: state.tournament.date,
-      settings: state.tournament.settings,
-      current_event_id: state.currentEventId
-    });
-    if (tErr) {
-      errors.push(`Giải đấu: ${tErr.message}`);
-      console.error('Supabase Sync ERROR (tournament):', tErr.message, tErr.details);
-    }
-
-    // 2. Sync Events list
     const eventIds = Object.keys(state.events || {});
-    for (const evtId of eventIds) {
+    
+    // Thu thập tất cả id trong Local State để tiến hành đồng bộ dọn dẹp
+    const teamIdsInState: string[] = [];
+    const groupIdsInState: string[] = [];
+    const matchIdsInState: string[] = [];
+
+    // Chuẩn bị dữ liệu snake_case sẵn sàng cho insertion
+    const allGroups: any[] = [];
+    const allTeams: any[] = [];
+    const allMatches: any[] = [];
+
+    Object.keys(state.events || {}).forEach(evtId => {
       const evt = state.events[evtId];
       if (evt) {
-        const { error: eErr } = await supabase.from('events').upsert({
-          id: evt.id,
-          name: evt.name,
-          settings: evt.settings || state.tournament.settings || DEFAULT_SETTINGS,
-          active_group_id: evt.activeGroupId,
-          advance_selection_mode: evt.advanceSelectionMode,
-          manual_qualified_team_ids: evt.manualQualifiedTeamIds
-        });
-        if (eErr) {
-          errors.push(`Nội dung "${evt.name}": ${eErr.message}`);
-          console.error(`Supabase Sync ERROR (events table, evtId ${evt.id}):`, eErr.message, eErr.details);
-        }
-      }
-    }
-
-    // Clean up deleted events in Supabase to keep db clean
-    const { data: dbEvents, error: dbEvtFetchErr } = await supabase.from('events').select('id');
-    if (dbEvtFetchErr) {
-      console.error('Supabase Sync ERROR (fetch events for cleanup):', dbEvtFetchErr.message);
-    } else if (dbEvents) {
-      const dbEventIds = dbEvents.map(e => e.id);
-      const deletedIds = dbEventIds.filter(id => !eventIds.includes(id));
-      for (const delId of deletedIds) {
-        try {
-          await supabase.from('events').delete().eq('id', delId);
-          await supabase.from('teams').delete().eq('event_id', delId);
-          await supabase.from('groups').delete().eq('event_id', delId);
-          await supabase.from('matches').delete().eq('event_id', delId);
-        } catch (fallErr: any) {
-          console.error(`Supabase Sync EXCEPTION (event delete cascade fallback, ID ${delId}):`, fallErr.message || fallErr);
-        }
-      }
-    }
-
-    // 3. Sync Teams for ALL events (saving all online data fields simultaneously)
-    const allTeams: any[] = [];
-    const teamIdsInState: string[] = [];
-    
-    Object.keys(state.events || {}).forEach(evtId => {
-      const evt = state.events[evtId];
-      if (evt && evt.teams) {
-        Object.values(evt.teams).forEach(t => {
-          allTeams.push({
-            id: t.id,
-            name: t.name,
-            group_id: t.groupId || null,
-            seed: t.seed || 'none',
-            event_id: evtId
+        // Thu thập và map Groups
+        if (evt.groups) {
+          Object.values(evt.groups).forEach(g => {
+            groupIdsInState.push(g.id);
+            allGroups.push({
+              id: g.id,
+              name: g.name,
+              team_ids: Array.isArray(g.teamIds) ? g.teamIds : [],
+              event_id: evtId
+            });
           });
-          teamIdsInState.push(t.id);
-        });
+        }
+        
+        // Thu thập và map Teams
+        if (evt.teams) {
+          Object.values(evt.teams).forEach(t => {
+            teamIdsInState.push(t.id);
+            allTeams.push({
+              id: t.id,
+              name: t.name,
+              group_id: t.groupId || null,
+              seed: t.seed || 'none',
+              event_id: evtId
+            });
+          });
+        }
+        
+        // Thu thập và map Matches
+        if (evt.matches) {
+          evt.matches.forEach(m => {
+            matchIdsInState.push(m.id);
+            allMatches.push({
+              id: m.id,
+              group_id: m.groupId || null,
+              team_a_id: m.teamAId || null,
+              team_b_id: m.teamBId || null,
+              score_a: m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : null,
+              score_b: m.scoreB !== undefined && m.score_b !== null ? m.score_b : null,
+              winner_id: m.winnerId || null,
+              status: m.status || 'pending',
+              round: m.round,
+              knockout_round_name: m.knockoutRoundName || null,
+              knockout_match_id: m.knockoutMatchId || null,
+              next_match_id: m.nextMatchId || null,
+              next_match_slot: m.nextMatchSlot || null,
+              event_id: evtId
+            });
+          });
+        }
       }
     });
 
-    if (allTeams.length > 0) {
-      const { error: teamsErr } = await supabase.from('teams').upsert(allTeams);
-      if (teamsErr) {
-        errors.push(`Đội bóng (upsert): ${teamsErr.message}`);
-        console.error('Supabase Sync ERROR (teams upsert):', teamsErr.message, teamsErr.details);
-      }
-    }
-    
-    try {
-      if (teamIdsInState.length > 0) {
-        const { error: delTeamsErr } = await supabase.from('teams').delete().not('id', 'in', `(${teamIdsInState.map(id => `'${id}'`).join(',')})`);
-        if (delTeamsErr) {
-          console.error('Supabase Sync ERROR (teams prune):', delTeamsErr.message, delTeamsErr.details);
-        }
-      } else {
-        const { error: delTeamsErr } = await supabase.from('teams').delete();
-        if (delTeamsErr) {
-          console.error('Supabase Sync ERROR (teams clear):', delTeamsErr.message);
-        }
-      }
-    } catch (pruneTeamsErr: any) {
-      console.error('Supabase Sync EXCEPTION (teams prune):', pruneTeamsErr.message || pruneTeamsErr);
-    }
+    console.log(`[Supabase Sync] Bắt đầu đồng bộ trực tuyến. Đang dọn dẹp theo trình tự ngược...`);
 
-    // 4. Sync Groups for ALL events
-    const allGroups: any[] = [];
-    const groupIdsInState: string[] = [];
-    
-    Object.keys(state.events || {}).forEach(evtId => {
-      const evt = state.events[evtId];
-      if (evt && evt.groups) {
-        Object.values(evt.groups).forEach(g => {
-          allGroups.push({
-            id: g.id,
-            name: g.name,
-            team_ids: Array.isArray(g.teamIds) ? g.teamIds : [],
-            event_id: evtId
-          });
-          groupIdsInState.push(g.id);
-        });
-      }
-    });
+    // ==========================================
+    // THÌ 1: PRUNING PHASE (REVERSE DEPENDENCY ORDER)
+    // ==========================================
 
-    if (allGroups.length > 0) {
-      const { error: groupsErr } = await supabase.from('groups').upsert(allGroups);
-      if (groupsErr) {
-        errors.push(`Bảng đấu (upsert): ${groupsErr.message}`);
-        console.error('Supabase Sync ERROR (groups upsert):', groupsErr.message, groupsErr.details);
-      }
-    }
-    
-    try {
-      if (groupIdsInState.length > 0) {
-        const { error: delGroupsErr } = await supabase.from('groups').delete().not('id', 'in', `(${groupIdsInState.map(id => `'${id}'`).join(',')})`);
-        if (delGroupsErr) {
-          console.error('Supabase Sync ERROR (groups prune):', delGroupsErr.message, delGroupsErr.details);
-        }
-      } else {
-        await supabase.from('groups').delete();
-      }
-    } catch (pruneGroupsErr: any) {
-      console.error('Supabase Sync EXCEPTION (groups prune):', pruneGroupsErr.message || pruneGroupsErr);
-    }
-
-    // 5. Sync Matches for ALL events
-    const allMatches: any[] = [];
-    const matchIdsInState: string[] = [];
-    
-    Object.keys(state.events || {}).forEach(evtId => {
-      const evt = state.events[evtId];
-      if (evt && evt.matches) {
-        evt.matches.forEach(m => {
-          allMatches.push({
-            id: m.id,
-            group_id: m.groupId || null, // Allow nullable group_id for Knockout matches
-            team_a_id: m.teamAId || null, // Allow nullable team_a_id for empty slots
-            team_b_id: m.teamBId || null, // Allow nullable team_b_id for empty slots
-            score_a: m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : null,
-            score_b: m.scoreB !== undefined && m.scoreB !== null ? m.scoreB : null,
-            winner_id: m.winnerId || null,
-            status: m.status || 'pending',
-            round: m.round,
-            knockout_round_name: m.knockoutRoundName || null,
-            knockout_match_id: m.knockoutMatchId || null,
-            next_match_id: m.nextMatchId || null,
-            next_match_slot: m.nextMatchSlot || null,
-            event_id: evtId
-          });
-          matchIdsInState.push(m.id);
-        });
-      }
-    });
-
-    if (allMatches.length > 0) {
-      const { error: matchesErr } = await supabase.from('matches').upsert(allMatches);
-      if (matchesErr) {
-        errors.push(`Trận đấu (upsert): ${matchesErr.message}`);
-        console.error('Supabase Sync ERROR (matches upsert):', matchesErr.message, matchesErr.details);
-      }
-    }
-    
+    // 1. Dọn dẹp Matches dư thừa trước vì nó trỏ FK tới Teams, Groups, và Events
     try {
       if (matchIdsInState.length > 0) {
-        const { error: delMatchesErr } = await supabase.from('matches').delete().not('id', 'in', `(${matchIdsInState.map(id => `'${id}'`).join(',')})`);
-        if (delMatchesErr) {
-          console.error('Supabase Sync ERROR (matches prune):', delMatchesErr.message, delMatchesErr.details);
+        const { error: mDelErr } = await supabase.from('matches').delete().not('id', 'in', `(${matchIdsInState.map(id => `'${id}'`).join(',')})`);
+        if (mDelErr) {
+          console.error("Lỗi tại bước dọn dẹp MATCHES:", mDelErr.message);
+          errors.push(`Dọn dẹp trận đấu: ${mDelErr.message}`);
         }
       } else {
-        await supabase.from('matches').delete();
+        const { error: mClearErr } = await supabase.from('matches').delete();
+        if (mClearErr) {
+          console.error("Lỗi tại bước xóa sạch MATCHES:", mClearErr.message);
+          errors.push(`Xóa sạch trận đấu: ${mClearErr.message}`);
+        }
       }
-    } catch (pruneMatchesErr: any) {
-      console.error('Supabase Sync EXCEPTION (matches prune):', pruneMatchesErr.message || pruneMatchesErr);
+    } catch (exc: any) {
+      console.error("Lỗi tại bước dọn dẹp MATCHES (Ngoại lệ):", exc);
+    }
+
+    // 2. Dọn dẹp Teams dư thừa vì nó trỏ FK tới Groups và Events
+    try {
+      if (teamIdsInState.length > 0) {
+        const { error: tDelErr } = await supabase.from('teams').delete().not('id', 'in', `(${teamIdsInState.map(id => `'${id}'`).join(',')})`);
+        if (tDelErr) {
+          console.error("Lỗi tại bước dọn dẹp TEAMS:", tDelErr.message);
+          errors.push(`Dọn dẹp đội: ${tDelErr.message}`);
+        }
+      } else {
+        const { error: tClearErr } = await supabase.from('teams').delete();
+        if (tClearErr) {
+          console.error("Lỗi tại bước xóa sạch TEAMS:", tClearErr.message);
+          errors.push(`Xóa sạch đội: ${tClearErr.message}`);
+        }
+      }
+    } catch (exc: any) {
+      console.error("Lỗi tại bước dọn dẹp TEAMS (Ngoại lệ):", exc);
+    }
+
+    // 3. Dọn dẹp Groups dư thừa vì nó trỏ FK tới Events
+    try {
+      if (groupIdsInState.length > 0) {
+        const { error: gDelErr } = await supabase.from('groups').delete().not('id', 'in', `(${groupIdsInState.map(id => `'${id}'`).join(',')})`);
+        if (gDelErr) {
+          console.error("Lỗi tại bước dọn dẹp GROUPS:", gDelErr.message);
+          errors.push(`Dọn dẹp bảng đấu: ${gDelErr.message}`);
+        }
+      } else {
+        const { error: gClearErr } = await supabase.from('groups').delete();
+        if (gClearErr) {
+          console.error("Lỗi tại bước xóa sạch GROUPS:", gClearErr.message);
+          errors.push(`Xóa sạch bảng đấu: ${gClearErr.message}`);
+        }
+      }
+    } catch (exc: any) {
+      console.error("Lỗi tại bước dọn dẹp GROUPS (Ngoại lệ):", exc);
+    }
+
+    // 4. Dọn dẹp Events dư thừa
+    try {
+      if (eventIds.length > 0) {
+        const { error: eDelErr } = await supabase.from('events').delete().not('id', 'in', `(${eventIds.map(id => `'${id}'`).join(',')})`);
+        if (eDelErr) {
+          console.error("Lỗi tại bước dọn dẹp EVENTS:", eDelErr.message);
+          errors.push(`Dọn dẹp sự kiện: ${eDelErr.message}`);
+        }
+      } else {
+        const { error: eClearErr } = await supabase.from('events').delete();
+        if (eClearErr) {
+          console.error("Lỗi tại bước xóa sạch EVENTS:", eClearErr.message);
+          errors.push(`Xóa sạch sự kiện: ${eClearErr.message}`);
+        }
+      }
+    } catch (exc: any) {
+      console.error("Lỗi tại bước dọn dẹp EVENTS (Ngoại lệ):", exc);
+    }
+
+
+    // ==========================================
+    // THÌ 2: UPSERT/INSERT PHASE (FORWARD ORDER)
+    // ==========================================
+
+    console.log(`[Supabase Sync] Đang ghi đè dữ liệu theo trình tự xuôi để bảo vệ Foreign Key...`);
+
+    // Bước 1: Ghi dữ liệu vào bảng `tournament`
+    try {
+      const { error: tErr } = await supabase.from('tournament').upsert({
+        id: tournamentId,
+        name: state.tournament.name,
+        organization: state.tournament.organization,
+        location: state.tournament.location,
+        date: state.tournament.date,
+        settings: state.tournament.settings,
+        current_event_id: state.currentEventId
+      });
+      if (tErr) {
+        console.error("Lỗi tại bước 1 (tournament):", tErr.message, tErr.details);
+        errors.push(`Giải đấu: ${tErr.message}`);
+      }
+    } catch (exc: any) {
+      console.error("Lỗi tại bước 1 - tournament (Ngoại lệ):", exc);
+    }
+
+    // Bước 2: Ghi dữ liệu vào bảng `events` (sau khi đã có tournament)
+    try {
+      for (const evtId of eventIds) {
+        const evt = state.events[evtId];
+        if (evt) {
+          const { error: eErr } = await supabase.from('events').upsert({
+            id: evt.id,
+            name: evt.name,
+            settings: evt.settings || state.tournament.settings || DEFAULT_SETTINGS,
+            active_group_id: evt.activeGroupId || null,
+            advance_selection_mode: evt.advanceSelectionMode || 'auto',
+            manual_qualified_team_ids: evt.manualQualifiedTeamIds || []
+          });
+          if (eErr) {
+            console.error(`Lỗi tại bước 2 (events) - ID ${evt.id}:`, eErr.message, eErr.details);
+            errors.push(`Sự kiện "${evt.name}": ${eErr.message}`);
+          }
+        }
+      }
+    } catch (exc: any) {
+      console.error("Lỗi tại bước 2 - events (Ngoại lệ):", exc);
+    }
+
+    // Bước 3: Ghi dữ liệu vào bảng `groups` (sau khi đã có events)
+    try {
+      if (allGroups.length > 0) {
+        const { error: gErr } = await supabase.from('groups').upsert(allGroups);
+        if (gErr) {
+          console.error("Lỗi tại bước 3 (groups):", gErr.message, gErr.details);
+          errors.push(`Bảng đấu: ${gErr.message}`);
+        }
+      }
+    } catch (exc: any) {
+      console.error("Lỗi tại bước 3 - groups (Ngoại lệ):", exc);
+    }
+
+    // Bước 4: Ghi dữ liệu vào bảng `teams` (sau khi đã có groups và events)
+    try {
+      if (allTeams.length > 0) {
+        const { error: tmErr } = await supabase.from('teams').upsert(allTeams);
+        if (tmErr) {
+          console.error("Lỗi tại bước 4 (teams):", tmErr.message, tmErr.details);
+          errors.push(`Đội: ${tmErr.message}`);
+        }
+      }
+    } catch (exc: any) {
+      console.error("Lỗi tại bước 4 - teams (Ngoại lệ):", exc);
+    }
+
+    // Bước 5: Ghi dữ liệu vào bảng `matches` (sau khi đã có đầy đủ teams, groups, events)
+    try {
+      if (allMatches.length > 0) {
+        const { error: mErr } = await supabase.from('matches').upsert(allMatches);
+        if (mErr) {
+          console.error("Lỗi tại bước 5 (matches):", mErr.message, mErr.details);
+          errors.push(`Trận đấu: ${mErr.message}`);
+        }
+      }
+    } catch (exc: any) {
+      console.error("Lỗi tại bước 5 - matches (Ngoại lệ):", exc);
+    }
+
+    if (errors.length === 0) {
+      console.log(`[Supabase Sync] Đồng bộ thành công hoàn tất!`);
     }
 
   } catch (err: any) {
-    errors.push(`Ngoại lệ hệ thống: ${err.message || err}`);
-    console.error('Lỗi ngoại lệ lưu đồng bộ Supabase:', err);
+    errors.push(`Ngoại lệ đồng bộ Supabase: ${err.message || err}`);
+    console.error('Ngoại lệ đồng bộ Supabase (Phát hiện ngoài tầm kiểm soát):', err);
   }
 
-  // Update error message state so the user is aware of Sync outcome
+  // Cập nhật trạng thái thông báo lỗi đồng bộ Supabase lên Zustand Store
   if (originalSet) {
     if (errors.length > 0) {
       originalSet({ supabaseSyncError: errors.join('; ') });

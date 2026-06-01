@@ -386,51 +386,151 @@ export default function Dashboard() {
       // Check remote database availability
       if (supabaseConnected) {
         console.log('Đồng bộ sao lưu JSON trực tiếp lên Supabase bằng .upsert()...');
-        
-        // 1. Upsert tournament
-        const { error: tErr } = await supabase.from('tournament').upsert({
-          id: parsed.tournament.id || 't-1',
-          name: parsed.tournament.name,
-          organization: parsed.tournament.organization,
-          location: parsed.tournament.location,
-          date: parsed.tournament.date,
-          settings: parsed.tournament.settings,
-          current_event_id: parsed.currentEventId || 'event-default'
-        });
-        if (tErr) {
-          console.error('Supabase Import ERROR (tournament):', tErr.message, tErr.details);
+
+        // ===================================================
+        // THÌ 1: PRUNING PHASE (REVERSE DEPENDENCY ORDER)
+        // ===================================================
+
+        // A. Dọn dẹp Matches trước vì trỏ FK tới Teams, Groups, Events
+        const incomingMatchIds = matchesToUpsert.map(m => m.id);
+        try {
+          if (incomingMatchIds.length > 0) {
+            const { error: mDelErr } = await supabase.from('matches').delete().not('id', 'in', `(${incomingMatchIds.map(id => `'${id}'`).join(',')})`);
+            if (mDelErr) {
+              console.error("Lỗi tại bước dọn dẹp MATCHES khi Import JSON:", mDelErr.message, mDelErr.details);
+            }
+          } else {
+            const { error: mClearErr } = await supabase.from('matches').delete();
+            if (mClearErr) {
+              console.error("Lỗi tại bước xóa sạch MATCHES khi Import JSON:", mClearErr.message);
+            }
+          }
+        } catch (exc: any) {
+          console.error("Ngoại lệ dọn dẹp MATCHES khi Import JSON:", exc);
         }
 
-        // 2. Upsert events
-        if (eventsToUpsert.length > 0) {
-          const { error: eErr } = await supabase.from('events').upsert(eventsToUpsert);
-          if (eErr) {
-            console.error('Supabase Import ERROR (events):', eErr.message, eErr.details);
+        // B. Dọn dẹp Teams vì trỏ FK tới Groups và Events
+        const incomingTeamIds = teamsToUpsert.map(t => t.id);
+        try {
+          if (incomingTeamIds.length > 0) {
+            const { error: tDelErr } = await supabase.from('teams').delete().not('id', 'in', `(${incomingTeamIds.map(id => `'${id}'`).join(',')})`);
+            if (tDelErr) {
+              console.error("Lỗi tại bước dọn dẹp TEAMS khi Import JSON:", tDelErr.message, tDelErr.details);
+            }
+          } else {
+            const { error: tClearErr } = await supabase.from('teams').delete();
+            if (tClearErr) {
+              console.error("Lỗi tại bước xóa sạch TEAMS khi Import JSON:", tClearErr.message);
+            }
           }
+        } catch (exc: any) {
+          console.error("Ngoại lệ dọn dẹp TEAMS khi Import JSON:", exc);
         }
 
-        // 3. Upsert teams
-        if (teamsToUpsert.length > 0) {
-          const { error: tmErr } = await supabase.from('teams').upsert(teamsToUpsert);
-          if (tmErr) {
-            console.error('Supabase Import ERROR (teams):', tmErr.message, tmErr.details);
+        // C. Dọn dẹp Groups vì trỏ FK tới Events
+        const incomingGroupIds = groupsToUpsert.map(g => g.id);
+        try {
+          if (incomingGroupIds.length > 0) {
+            const { error: gDelErr } = await supabase.from('groups').delete().not('id', 'in', `(${incomingGroupIds.map(id => `'${id}'`).join(',')})`);
+            if (gDelErr) {
+              console.error("Lỗi tại bước dọn dẹp GROUPS khi Import JSON:", gDelErr.message, gDelErr.details);
+            }
+          } else {
+            const { error: gClearErr } = await supabase.from('groups').delete();
+            if (gClearErr) {
+              console.error("Lỗi tại bước xóa sạch GROUPS khi Import JSON:", gClearErr.message);
+            }
           }
+        } catch (exc: any) {
+          console.error("Ngoại lệ dọn dẹp GROUPS khi Import JSON:", exc);
         }
 
-        // 4. Upsert groups
-        if (groupsToUpsert.length > 0) {
-          const { error: gErr } = await supabase.from('groups').upsert(groupsToUpsert);
-          if (gErr) {
-            console.error('Supabase Import ERROR (groups):', gErr.message, gErr.details);
+        // D. Dọn dẹp Events
+        const incomingEventIds = eventsToUpsert.map(e => e.id);
+        try {
+          if (incomingEventIds.length > 0) {
+            const { error: eDelErr } = await supabase.from('events').delete().not('id', 'in', `(${incomingEventIds.map(id => `'${id}'`).join(',')})`);
+            if (eDelErr) {
+              console.error("Lỗi tại bước dọn dẹp EVENTS khi Import JSON:", eDelErr.message, eDelErr.details);
+            }
+          } else {
+            const { error: eClearErr } = await supabase.from('events').delete();
+            if (eClearErr) {
+              console.error("Lỗi tại bước xóa sạch EVENTS khi Import JSON:", eClearErr.message);
+            }
           }
+        } catch (exc: any) {
+          console.error("Ngoại lệ dọn dẹp EVENTS khi Import JSON:", exc);
         }
 
-        // 5. Upsert matches
-        if (matchesToUpsert.length > 0) {
-          const { error: mErr } = await supabase.from('matches').upsert(matchesToUpsert);
-          if (mErr) {
-            console.error('Supabase Import ERROR (matches):', mErr.message, mErr.details);
+        // ===================================================
+        // THÌ 2: UPSERT/INSERT PHASE (FORWARD ORDER)
+        // ===================================================
+
+        // Bước 1: Ghi dữ liệu vào bảng `tournament`
+        try {
+          const { error: tErr } = await supabase.from('tournament').upsert({
+            id: parsed.tournament.id || 't-1',
+            name: parsed.tournament.name,
+            organization: parsed.tournament.organization,
+            location: parsed.tournament.location,
+            date: parsed.tournament.date,
+            settings: parsed.tournament.settings,
+            current_event_id: parsed.currentEventId || 'event-default'
+          });
+          if (tErr) {
+            console.error("Lỗi tại bước 1 (tournament) khi Import JSON:", tErr.message, tErr.details);
           }
+        } catch (exc: any) {
+          console.error("Ngoại lệ Bước 1 (tournament) khi Import JSON:", exc);
+        }
+
+        // Bước 2: Ghi dữ liệu vào bảng `events` (sau khi đã có tournament)
+        try {
+          if (eventsToUpsert.length > 0) {
+            const { error: eErr } = await supabase.from('events').upsert(eventsToUpsert);
+            if (eErr) {
+              console.error("Lỗi tại bước 2 (events) khi Import JSON:", eErr.message, eErr.details);
+            }
+          }
+        } catch (exc: any) {
+          console.error("Ngoại lệ Bước 2 (events) khi Import JSON:", exc);
+        }
+
+        // Bước 3: Ghi dữ liệu vào bảng `groups` (sau khi đã có events)
+        try {
+          if (groupsToUpsert.length > 0) {
+            const { error: gErr } = await supabase.from('groups').upsert(groupsToUpsert);
+            if (gErr) {
+              console.error("Lỗi tại bước 3 (groups) khi Import JSON:", gErr.message, gErr.details);
+            }
+          }
+        } catch (exc: any) {
+          console.error("Ngoại lệ Bước 3 (groups) khi Import JSON:", exc);
+        }
+
+        // Bước 4: Ghi dữ liệu vào bảng `teams` (sau khi đã có groups và events)
+        try {
+          if (teamsToUpsert.length > 0) {
+            const { error: tmErr } = await supabase.from('teams').upsert(teamsToUpsert);
+            if (tmErr) {
+              console.error("Lỗi tại bước 4 (teams) khi Import JSON:", tmErr.message, tmErr.details);
+            }
+          }
+        } catch (exc: any) {
+          console.error("Ngoại lệ Bước 4 (teams) khi Import JSON:", exc);
+        }
+
+        // Bước 5: Ghi dữ liệu vào bảng `matches` (sau khi đã có đầy đủ teams, groups, events)
+        try {
+          if (matchesToUpsert.length > 0) {
+            const { error: mErr } = await supabase.from('matches').upsert(matchesToUpsert);
+            if (mErr) {
+              console.error("Lỗi tại bước 5 (matches) khi Import JSON:", mErr.message, mErr.details);
+            }
+          }
+        } catch (exc: any) {
+          console.error("Ngoại lệ Bước 5 (matches) khi Import JSON:", exc);
         }
       }
 
