@@ -40,9 +40,15 @@ export default function App() {
     setSelectedTab,
     isAdmin,
     setAdminStatus,
+    initSupabase,
   } = useTournamentStore();
 
   const ADMIN_PASSWORD = 'admin123';
+
+  // Khởi tạo & đồng bộ dữ liệu từ Supabase trực tuyến khi khởi chạy ứng dụng
+  useEffect(() => {
+    initSupabase();
+  }, [initSupabase]);
 
   const handleAdminAuth = () => {
     if (isAdmin) {
@@ -135,7 +141,7 @@ export default function App() {
           <div className="p-3.5 border-t border-[#1e293b] bg-[#0e1726]/80 flex items-center justify-between gap-3">
             <div className="flex flex-col">
               <span className="text-[9px] font-bold text-slate-400 flex items-center gap-1">
-                <Zap size={10} className="text-amber-400 fill-amber-400/20" /> Hệ thống Offline
+                <Zap size={10} className="text-emerald-400 fill-emerald-400/20 animate-pulse" /> Trực tuyến Supabase
               </span>
               <span className="text-[8px] text-slate-500 mt-0.5">Quốc Tế - 2026</span>
             </div>
