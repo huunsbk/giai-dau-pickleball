@@ -106,10 +106,10 @@ const syncStateToSupabase = async (state: AppState) => {
       location: state.tournament.location,
       date: state.tournament.date,
       settings: state.tournament.settings,
-      currentEventId: state.currentEventId
+      current_event_id: state.currentEventId
     });
 
-    // 2. Sync Events list (Only events whose metadata, name, settings, mode, or selection matches are updated)
+    // 2. Sync Events list
     const eventIds = Object.keys(state.events || {});
     for (const evtId of eventIds) {
       const evt = state.events[evtId];
@@ -118,9 +118,9 @@ const syncStateToSupabase = async (state: AppState) => {
           id: evt.id,
           name: evt.name,
           settings: evt.settings,
-          activeGroupId: evt.activeGroupId,
-          advanceSelectionMode: evt.advanceSelectionMode,
-          manualQualifiedTeamIds: evt.manualQualifiedTeamIds
+          active_group_id: evt.activeGroupId,
+          advance_selection_mode: evt.advanceSelectionMode,
+          manual_qualified_team_ids: evt.manualQualifiedTeamIds
         });
       }
     }
@@ -132,77 +132,109 @@ const syncStateToSupabase = async (state: AppState) => {
       const deletedIds = dbEventIds.filter(id => !eventIds.includes(id));
       for (const delId of deletedIds) {
         await supabase.from('events').delete().eq('id', delId);
-        await supabase.from('teams').delete().eq('eventId', delId);
-        await supabase.from('groups').delete().eq('eventId', delId);
-        await supabase.from('matches').delete().eq('eventId', delId);
+        await supabase.from('teams').delete().eq('event_id', delId);
+        await supabase.from('groups').delete().eq('event_id', delId);
+        await supabase.from('matches').delete().eq('event_id', delId);
       }
     }
 
-    // 3. Sync Teams for current active event (swap/overwrite)
-    const teamList = Object.values(state.teams || {});
-    if (teamList.length > 0) {
-      const dbTeams = teamList.map(t => ({
-        id: t.id,
-        name: t.name,
-        groupId: t.groupId,
-        seed: t.seed,
-        eventId: state.currentEventId
-      }));
-      await supabase.from('teams').upsert(dbTeams);
+    // 3. Sync Teams for ALL events (saving all online data fields simultaneously)
+    const allTeams: any[] = [];
+    const teamIdsInState: string[] = [];
+    
+    Object.keys(state.events || {}).forEach(evtId => {
+      const evt = state.events[evtId];
+      if (evt && evt.teams) {
+        Object.values(evt.teams).forEach(t => {
+          allTeams.push({
+            id: t.id,
+            name: t.name,
+            group_id: t.groupId,
+            seed: t.seed,
+            event_id: evtId
+          });
+          teamIdsInState.push(t.id);
+        });
+      }
+    });
+
+    if (allTeams.length > 0) {
+      await supabase.from('teams').upsert(allTeams);
     }
-    const activeTeamIds = teamList.map(t => t.id);
-    const deleteTeams = supabase.from('teams').delete().eq('eventId', state.currentEventId);
-    if (activeTeamIds.length > 0) {
-      await deleteTeams.not('id', 'in', `(${activeTeamIds.join(',')})`);
+    
+    const deleteTeams = supabase.from('teams').delete();
+    if (teamIdsInState.length > 0) {
+      await deleteTeams.not('id', 'in', `(${teamIdsInState.map(id => `'${id}'`).join(',')})`);
     } else {
       await deleteTeams;
     }
 
-    // 4. Sync Groups for current active event (swap/overwrite)
-    const groupList = Object.values(state.groups || {});
-    if (groupList.length > 0) {
-      const dbGroups = groupList.map(g => ({
-        id: g.id,
-        name: g.name,
-        teamIds: g.teamIds || [],
-        eventId: state.currentEventId
-      }));
-      await supabase.from('groups').upsert(dbGroups);
+    // 4. Sync Groups for ALL events
+    const allGroups: any[] = [];
+    const groupIdsInState: string[] = [];
+    
+    Object.keys(state.events || {}).forEach(evtId => {
+      const evt = state.events[evtId];
+      if (evt && evt.groups) {
+        Object.values(evt.groups).forEach(g => {
+          allGroups.push({
+            id: g.id,
+            name: g.name,
+            team_ids: g.teamIds || [],
+            event_id: evtId
+          });
+          groupIdsInState.push(g.id);
+        });
+      }
+    });
+
+    if (allGroups.length > 0) {
+      await supabase.from('groups').upsert(allGroups);
     }
-    const activeGroupIds = groupList.map(g => g.id);
-    const deleteGroups = supabase.from('groups').delete().eq('eventId', state.currentEventId);
-    if (activeGroupIds.length > 0) {
-      await deleteGroups.not('id', 'in', `(${activeGroupIds.join(',')})`);
+    
+    const deleteGroups = supabase.from('groups').delete();
+    if (groupIdsInState.length > 0) {
+      await deleteGroups.not('id', 'in', `(${groupIdsInState.map(id => `'${id}'`).join(',')})`);
     } else {
       await deleteGroups;
     }
 
-    // 5. Sync Matches for current active event (swap/overwrite)
-    const matchList = state.matches || [];
-    if (matchList.length > 0) {
-      const dbMatches = matchList.map(m => ({
-        id: m.id,
-        groupId: m.groupId,
-        teamAId: m.teamAId,
-        teamBId: m.teamBId,
-        scoreA: m.scoreA,
-        scoreB: m.scoreB,
-        winnerId: m.winnerId,
-        status: m.status,
-        round: m.round,
-        knockoutRoundName: m.knockoutRoundName || null,
-        knockoutMatchId: m.knockoutMatchId || null,
-        nextMatchId: m.nextMatchId || null,
-        nextMatchSlot: m.nextMatchSlot || null,
-        eventId: state.currentEventId
-      }));
-      await supabase.from('matches').upsert(dbMatches);
+    // 5. Sync Matches for ALL events
+    const allMatches: any[] = [];
+    const matchIdsInState: string[] = [];
+    
+    Object.keys(state.events || {}).forEach(evtId => {
+      const evt = state.events[evtId];
+      if (evt && evt.matches) {
+        evt.matches.forEach(m => {
+          allMatches.push({
+            id: m.id,
+            group_id: m.groupId,
+            team_a_id: m.teamAId,
+            team_b_id: m.teamBId,
+            score_a: m.scoreA,
+            score_b: m.scoreB,
+            winner_id: m.winnerId,
+            status: m.status,
+            round: m.round,
+            knockout_round_name: m.knockoutRoundName || null,
+            knockout_match_id: m.knockoutMatchId || null,
+            next_match_id: m.nextMatchId || null,
+            next_match_slot: m.nextMatchSlot || null,
+            event_id: evtId
+          });
+          matchIdsInState.push(m.id);
+        });
+      }
+    });
+
+    if (allMatches.length > 0) {
+      await supabase.from('matches').upsert(allMatches);
     }
-    const activeMatchIds = matchList.map(m => m.id);
-    const deleteMatches = supabase.from('matches').delete().eq('eventId', state.currentEventId);
-    if (activeMatchIds.length > 0) {
-      // Postgres list formatted with quoted alphanumeric ids to work flawlessly
-      await deleteMatches.not('id', 'in', `(${activeMatchIds.map(id => `'${id}'`).join(',')})`);
+    
+    const deleteMatches = supabase.from('matches').delete();
+    if (matchIdsInState.length > 0) {
+      await deleteMatches.not('id', 'in', `(${matchIdsInState.map(id => `'${id}'`).join(',')})`);
     } else {
       await deleteMatches;
     }
@@ -1391,7 +1423,7 @@ export const useTournamentStore = create<AppState>()(
                 location: DEFAULT_TOURNAMENT.location,
                 date: DEFAULT_TOURNAMENT.date,
                 settings: DEFAULT_SETTINGS,
-                currentEventId: 'event-default'
+                current_event_id: 'event-default'
               };
               if (localState.isAdmin) {
                 await supabase.from('tournament').insert([defaultObj]);
@@ -1405,9 +1437,9 @@ export const useTournamentStore = create<AppState>()(
                 id: 'event-default',
                 name: 'Đôi Nam Chuyên Nghiệp',
                 settings: DEFAULT_SETTINGS,
-                activeGroupId: null,
-                advanceSelectionMode: 'auto',
-                manualQualifiedTeamIds: []
+                active_group_id: null,
+                advance_selection_mode: 'auto',
+                manual_qualified_team_ids: []
               };
               if (localState.isAdmin) {
                 await supabase.from('events').insert([defaultEvt]);
@@ -1418,13 +1450,17 @@ export const useTournamentStore = create<AppState>()(
             // Khởi tạo cấu trúc map của events
             const eventsRecord: Record<string, EventData> = {};
             dbEvents.forEach(evt => {
+              const activeGroupId = evt.active_group_id !== undefined ? evt.active_group_id : (evt.activeGroupId || null);
+              const advanceSelectionMode = evt.advance_selection_mode !== undefined ? evt.advance_selection_mode : (evt.advanceSelectionMode || 'auto');
+              const manualQualifiedTeamIds = evt.manual_qualified_team_ids !== undefined ? evt.manual_qualified_team_ids : (evt.manualQualifiedTeamIds || []);
+
               eventsRecord[evt.id] = {
                 id: evt.id,
                 name: evt.name,
                 settings: evt.settings || DEFAULT_SETTINGS,
-                activeGroupId: evt.activeGroupId || null,
-                advanceSelectionMode: evt.advanceSelectionMode || 'auto',
-                manualQualifiedTeamIds: evt.manualQualifiedTeamIds || [],
+                activeGroupId: activeGroupId,
+                advanceSelectionMode: advanceSelectionMode,
+                manualQualifiedTeamIds: manualQualifiedTeamIds,
                 teams: {},
                 groups: {},
                 matches: []
@@ -1434,11 +1470,13 @@ export const useTournamentStore = create<AppState>()(
             // Nạp thông tin Đội (teams)
             const loadedTeams = teamData || [];
             loadedTeams.forEach(t => {
-              if (eventsRecord[t.eventId]) {
-                eventsRecord[t.eventId].teams[t.id] = {
+              const eventId = t.event_id || t.eventId;
+              if (eventsRecord[eventId]) {
+                const groupId = t.group_id !== undefined ? t.group_id : t.groupId;
+                eventsRecord[eventId].teams[t.id] = {
                   id: t.id,
                   name: t.name,
-                  groupId: t.groupId,
+                  groupId: groupId,
                   seed: t.seed
                 };
               }
@@ -1447,11 +1485,13 @@ export const useTournamentStore = create<AppState>()(
             // Nạp thông tin Nhóm/Bảng đấu (groups)
             const loadedGroups = groupData || [];
             loadedGroups.forEach(g => {
-              if (eventsRecord[g.eventId]) {
-                eventsRecord[g.eventId].groups[g.id] = {
+              const eventId = g.event_id || g.eventId;
+              if (eventsRecord[eventId]) {
+                const teamIds = g.team_ids !== undefined ? g.team_ids : (g.teamIds || []);
+                eventsRecord[eventId].groups[g.id] = {
                   id: g.id,
                   name: g.name,
-                  teamIds: g.teamIds || []
+                  teamIds: teamIds
                 };
               }
             });
@@ -1459,27 +1499,39 @@ export const useTournamentStore = create<AppState>()(
             // Nạp thông tin Trận đấu (matches)
             const loadedMatches = matchData || [];
             loadedMatches.forEach(m => {
-              if (eventsRecord[m.eventId]) {
-                eventsRecord[m.eventId].matches.push({
+              const eventId = m.event_id || m.eventId;
+              if (eventsRecord[eventId]) {
+                const groupId = m.group_id !== undefined ? m.group_id : m.groupId;
+                const teamAId = m.team_a_id !== undefined ? m.team_a_id : m.teamAId;
+                const teamBId = m.team_b_id !== undefined ? m.team_b_id : m.teamBId;
+                const scoreA = m.score_a !== undefined ? m.score_a : (m.scoreA !== undefined ? m.scoreA : null);
+                const scoreB = m.score_b !== undefined ? m.score_b : (m.scoreB !== undefined ? m.scoreB : null);
+                const winnerId = m.winner_id !== undefined ? m.winner_id : m.winnerId;
+                const knockoutRoundName = m.knockout_round_name !== undefined ? m.knockout_round_name : m.knockoutRoundName;
+                const knockoutMatchId = m.knockout_match_id !== undefined ? m.knockout_match_id : m.knockoutMatchId;
+                const nextMatchId = m.next_match_id !== undefined ? m.next_match_id : m.nextMatchId;
+                const nextMatchSlot = m.next_match_slot !== undefined ? m.next_match_slot : m.nextMatchSlot;
+
+                eventsRecord[eventId].matches.push({
                   id: m.id,
-                  groupId: m.groupId,
-                  teamAId: m.teamAId,
-                  teamBId: m.teamBId,
-                  scoreA: m.scoreA,
-                  scoreB: m.scoreB,
-                  winnerId: m.winnerId,
+                  groupId: groupId,
+                  teamAId: teamAId,
+                  teamBId: teamBId,
+                  scoreA: scoreA,
+                  scoreB: scoreB,
+                  winnerId: winnerId,
                   status: m.status,
                   round: m.round,
-                  knockoutRoundName: m.knockoutRoundName,
-                  knockoutMatchId: m.knockoutMatchId,
-                  nextMatchId: m.nextMatchId,
-                  nextMatchSlot: m.nextMatchSlot
+                  knockoutRoundName: knockoutRoundName,
+                  knockoutMatchId: knockoutMatchId,
+                  nextMatchId: nextMatchId,
+                  nextMatchSlot: nextMatchSlot
                 });
               }
             });
 
             // Thiết lập sự kiện hiện tại
-            const currentEventId = dbTournament.currentEventId || 'event-default';
+            const currentEventId = dbTournament.current_event_id || dbTournament.currentEventId || 'event-default';
             const activeEvent = eventsRecord[currentEventId] || Object.values(eventsRecord)[0] || {
               id: 'event-default',
               name: 'Đôi Nam Chuyên Nghiệp',
