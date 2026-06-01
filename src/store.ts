@@ -25,6 +25,7 @@ interface AppState {
   isAdmin: boolean;
   setAdminStatus: (status: boolean) => void;
   supabaseConnected: boolean | null; // null = checking, true = online, false = using offline/cached data
+  supabaseSyncError: string | null;
 
   // Actions
   checkConnection: () => Promise<boolean>;
@@ -94,12 +95,13 @@ const DEFAULT_TOURNAMENT: Tournament = {
   settings: DEFAULT_SETTINGS,
 };
 
-const syncStateToSupabase = async (state: AppState) => {
+const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
+  const errors: string[] = [];
   try {
     const tournamentId = state.tournament.id || 't-1';
     
     // 1. Sync Tournament Metadata
-    await supabase.from('tournament').upsert({
+    const { error: tErr } = await supabase.from('tournament').upsert({
       id: tournamentId,
       name: state.tournament.name,
       organization: state.tournament.organization,
@@ -108,26 +110,36 @@ const syncStateToSupabase = async (state: AppState) => {
       settings: state.tournament.settings,
       current_event_id: state.currentEventId
     });
+    if (tErr) {
+      errors.push(`Giải đấu: ${tErr.message}`);
+      console.error('Supabase Sync ERROR (tournament):', tErr.message, tErr.details);
+    }
 
     // 2. Sync Events list
     const eventIds = Object.keys(state.events || {});
     for (const evtId of eventIds) {
       const evt = state.events[evtId];
       if (evt) {
-        await supabase.from('events').upsert({
+        const { error: eErr } = await supabase.from('events').upsert({
           id: evt.id,
           name: evt.name,
-          settings: evt.settings,
+          settings: evt.settings || state.tournament.settings || DEFAULT_SETTINGS,
           active_group_id: evt.activeGroupId,
           advance_selection_mode: evt.advanceSelectionMode,
           manual_qualified_team_ids: evt.manualQualifiedTeamIds
         });
+        if (eErr) {
+          errors.push(`Nội dung "${evt.name}": ${eErr.message}`);
+          console.error(`Supabase Sync ERROR (events table, evtId ${evt.id}):`, eErr.message, eErr.details);
+        }
       }
     }
 
     // Clean up deleted events in Supabase to keep db clean
-    const { data: dbEvents } = await supabase.from('events').select('id');
-    if (dbEvents) {
+    const { data: dbEvents, error: dbEvtFetchErr } = await supabase.from('events').select('id');
+    if (dbEvtFetchErr) {
+      console.error('Supabase Sync ERROR (fetch events for cleanup):', dbEvtFetchErr.message);
+    } else if (dbEvents) {
       const dbEventIds = dbEvents.map(e => e.id);
       const deletedIds = dbEventIds.filter(id => !eventIds.includes(id));
       for (const delId of deletedIds) {
@@ -149,8 +161,8 @@ const syncStateToSupabase = async (state: AppState) => {
           allTeams.push({
             id: t.id,
             name: t.name,
-            group_id: t.groupId,
-            seed: t.seed,
+            group_id: t.groupId || null,
+            seed: t.seed || 'none',
             event_id: evtId
           });
           teamIdsInState.push(t.id);
@@ -159,14 +171,23 @@ const syncStateToSupabase = async (state: AppState) => {
     });
 
     if (allTeams.length > 0) {
-      await supabase.from('teams').upsert(allTeams);
+      const { error: teamsErr } = await supabase.from('teams').upsert(allTeams);
+      if (teamsErr) {
+        errors.push(`Đội bóng (upsert): ${teamsErr.message}`);
+        console.error('Supabase Sync ERROR (teams upsert):', teamsErr.message, teamsErr.details);
+      }
     }
     
-    const deleteTeams = supabase.from('teams').delete();
     if (teamIdsInState.length > 0) {
-      await deleteTeams.not('id', 'in', `(${teamIdsInState.map(id => `'${id}'`).join(',')})`);
+      const { error: delTeamsErr } = await supabase.from('teams').delete().not('id', 'in', `(${teamIdsInState.map(id => `'${id}'`).join(',')})`);
+      if (delTeamsErr) {
+        console.error('Supabase Sync ERROR (teams prune):', delTeamsErr.message, delTeamsErr.details);
+      }
     } else {
-      await deleteTeams;
+      const { error: delTeamsErr } = await supabase.from('teams').delete();
+      if (delTeamsErr) {
+        console.error('Supabase Sync ERROR (teams clear):', delTeamsErr.messageBy);
+      }
     }
 
     // 4. Sync Groups for ALL events
@@ -189,14 +210,20 @@ const syncStateToSupabase = async (state: AppState) => {
     });
 
     if (allGroups.length > 0) {
-      await supabase.from('groups').upsert(allGroups);
+      const { error: groupsErr } = await supabase.from('groups').upsert(allGroups);
+      if (groupsErr) {
+        errors.push(`Bảng đấu (upsert): ${groupsErr.message}`);
+        console.error('Supabase Sync ERROR (groups upsert):', groupsErr.message, groupsErr.details);
+      }
     }
     
-    const deleteGroups = supabase.from('groups').delete();
     if (groupIdsInState.length > 0) {
-      await deleteGroups.not('id', 'in', `(${groupIdsInState.map(id => `'${id}'`).join(',')})`);
+      const { error: delGroupsErr } = await supabase.from('groups').delete().not('id', 'in', `(${groupIdsInState.map(id => `'${id}'`).join(',')})`);
+      if (delGroupsErr) {
+        console.error('Supabase Sync ERROR (groups prune):', delGroupsErr.message, delGroupsErr.details);
+      }
     } else {
-      await deleteGroups;
+      await supabase.from('groups').delete();
     }
 
     // 5. Sync Matches for ALL events
@@ -209,13 +236,13 @@ const syncStateToSupabase = async (state: AppState) => {
         evt.matches.forEach(m => {
           allMatches.push({
             id: m.id,
-            group_id: m.groupId,
-            team_a_id: m.teamAId,
-            team_b_id: m.teamBId,
-            score_a: m.scoreA,
-            score_b: m.scoreB,
-            winner_id: m.winnerId,
-            status: m.status,
+            group_id: m.groupId || null, // Allow nullable group_id for Knockout matches
+            team_a_id: m.teamAId || null, // Allow nullable team_a_id for empty slots
+            team_b_id: m.teamBId || null, // Allow nullable team_b_id for empty slots
+            score_a: m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : null,
+            score_b: m.scoreB !== undefined && m.scoreB !== null ? m.scoreB : null,
+            winner_id: m.winnerId || null,
+            status: m.status || 'pending',
             round: m.round,
             knockout_round_name: m.knockoutRoundName || null,
             knockout_match_id: m.knockoutMatchId || null,
@@ -229,18 +256,34 @@ const syncStateToSupabase = async (state: AppState) => {
     });
 
     if (allMatches.length > 0) {
-      await supabase.from('matches').upsert(allMatches);
+      const { error: matchesErr } = await supabase.from('matches').upsert(allMatches);
+      if (matchesErr) {
+        errors.push(`Trận đấu (upsert): ${matchesErr.message}`);
+        console.error('Supabase Sync ERROR (matches upsert):', matchesErr.message, matchesErr.details);
+      }
     }
     
-    const deleteMatches = supabase.from('matches').delete();
     if (matchIdsInState.length > 0) {
-      await deleteMatches.not('id', 'in', `(${matchIdsInState.map(id => `'${id}'`).join(',')})`);
+      const { error: delMatchesErr } = await supabase.from('matches').delete().not('id', 'in', `(${matchIdsInState.map(id => `'${id}'`).join(',')})`);
+      if (delMatchesErr) {
+        console.error('Supabase Sync ERROR (matches prune):', delMatchesErr.message, delMatchesErr.details);
+      }
     } else {
-      await deleteMatches;
+      await supabase.from('matches').delete();
     }
 
-  } catch (err) {
-    console.error('Lỗi lưu đồng bộ Supabase:', err);
+  } catch (err: any) {
+    errors.push(`Ngoại lệ hệ thống: ${err.message || err}`);
+    console.error('Lỗi ngoại lệ lưu đồng bộ Supabase:', err);
+  }
+
+  // Update error message state so the user is aware of Sync outcome
+  if (originalSet) {
+    if (errors.length > 0) {
+      originalSet({ supabaseSyncError: errors.join('; ') });
+    } else {
+      originalSet({ supabaseSyncError: null });
+    }
   }
 };
 
@@ -340,7 +383,7 @@ export const useTournamentStore = create<AppState>()(
         // Sync with Supabase on modifications if admin holds active session
         const currentState = get();
         if (currentState.isAdmin) {
-          syncStateToSupabase(currentState);
+          syncStateToSupabase(currentState, originalSet);
         }
       };
 
@@ -405,6 +448,7 @@ export const useTournamentStore = create<AppState>()(
           set({ isAdmin: status });
         },
         supabaseConnected: null,
+        supabaseSyncError: null,
         checkConnection: async () => {
           const connected = await checkSupabaseConnection();
           set({ supabaseConnected: connected });

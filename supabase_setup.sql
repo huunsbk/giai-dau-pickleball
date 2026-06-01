@@ -56,9 +56,9 @@ CREATE TABLE groups (
 -- 6. Tạo bảng LỊCH THI ĐẤU VÀ TỶ SỐ TRẬN ĐẤU (Matches)
 CREATE TABLE matches (
     id TEXT PRIMARY KEY,
-    group_id TEXT NOT NULL,
-    team_a_id TEXT NOT NULL,
-    team_b_id TEXT NOT NULL,
+    group_id TEXT,
+    team_a_id TEXT,
+    team_b_id TEXT,
     score_a INTEGER,
     score_b INTEGER,
     winner_id TEXT,
