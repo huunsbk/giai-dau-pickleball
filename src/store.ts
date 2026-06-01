@@ -184,7 +184,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
     
     try {
       if (teamIdsInState.length > 0) {
-        const { error: delTeamsErr } = await supabase.from('teams').delete().not('id', 'in', `(${teamIdsInState.join(',')})`);
+        const { error: delTeamsErr } = await supabase.from('teams').delete().not('id', 'in', `(${teamIdsInState.map(id => `'${id}'`).join(',')})`);
         if (delTeamsErr) {
           console.error('Supabase Sync ERROR (teams prune):', delTeamsErr.message, delTeamsErr.details);
         }
@@ -227,7 +227,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
     
     try {
       if (groupIdsInState.length > 0) {
-        const { error: delGroupsErr } = await supabase.from('groups').delete().not('id', 'in', `(${groupIdsInState.join(',')})`);
+        const { error: delGroupsErr } = await supabase.from('groups').delete().not('id', 'in', `(${groupIdsInState.map(id => `'${id}'`).join(',')})`);
         if (delGroupsErr) {
           console.error('Supabase Sync ERROR (groups prune):', delGroupsErr.message, delGroupsErr.details);
         }
@@ -277,7 +277,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
     
     try {
       if (matchIdsInState.length > 0) {
-        const { error: delMatchesErr } = await supabase.from('matches').delete().not('id', 'in', `(${matchIdsInState.join(',')})`);
+        const { error: delMatchesErr } = await supabase.from('matches').delete().not('id', 'in', `(${matchIdsInState.map(id => `'${id}'`).join(',')})`);
         if (delMatchesErr) {
           console.error('Supabase Sync ERROR (matches prune):', delMatchesErr.message, delMatchesErr.details);
         }
