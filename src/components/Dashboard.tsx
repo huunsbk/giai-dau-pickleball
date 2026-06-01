@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { useTournamentStore } from '../store';
-import { Trophy, Users, Layers, Calendar, Play, Download, Upload, Trash2, Check, AlertCircle, MapPin, CalendarDays, PlusCircle, LayoutGrid, Award, Sparkles, FileText } from 'lucide-react';
+import { Trophy, Users, Layers, Calendar, Play, Download, Upload, Trash2, Check, AlertCircle, MapPin, CalendarDays, PlusCircle, LayoutGrid, Award, Sparkles, FileText, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 
 export default function Dashboard() {
   const {
@@ -22,6 +22,8 @@ export default function Dashboard() {
     generateAllSchedules,
     addLog,
     setSelectedTab,
+    supabaseConnected,
+    checkConnection,
   } = useTournamentStore();
 
   const [name, setName] = useState(tournament.name);
@@ -42,6 +44,24 @@ export default function Dashboard() {
   const [dragActive, setDragActive] = useState(false);
 
   const [notification, setNotification] = useState<string | null>(null);
+  const [isCheckingConn, setIsCheckingConn] = useState(false);
+
+  // Auto check and monitor connection in real-time
+  React.useEffect(() => {
+    checkConnection();
+    const interval = setInterval(() => {
+      checkConnection();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [checkConnection]);
+
+  const handleManualCheck = async () => {
+    if (isCheckingConn) return;
+    setIsCheckingConn(true);
+    await checkConnection();
+    setIsCheckingConn(false);
+    showToast('Đã cập nhật trạng thái kết nối Supabase trực tuyến!');
+  };
 
   const teamList = Object.values(teams);
   const groupList = Object.values(groups);
@@ -297,6 +317,71 @@ export default function Dashboard() {
             <Play size={14} fill="currentColor" className="text-indigo-600" /> Nạp Dữ Liệu Mẫu
           </button>
         )}
+      </div>
+
+      {/* TRẠNG THÁI KẾT NỐI SUPABASE Ở THỜI GIAN THỰC */}
+      <div className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
+        supabaseConnected === null
+          ? 'bg-zinc-50 border-zinc-200 dark:bg-zinc-900/40 dark:border-zinc-800 text-zinc-500'
+          : supabaseConnected
+            ? 'bg-emerald-50/75 border-emerald-200/80 dark:bg-emerald-950/20 dark:border-emerald-900/40 text-emerald-800 dark:text-emerald-300'
+            : 'bg-amber-50/75 border-amber-200/80 dark:bg-amber-955/20 dark:border-amber-900/40 text-amber-800 dark:text-amber-300'
+      }`} id="supabase-realtime-status-card">
+        <div className="flex items-start gap-3">
+          <div className={`p-2.5 rounded-xl shrink-0 ${
+            supabaseConnected === null
+              ? 'bg-zinc-200/60 text-zinc-500 dark:bg-zinc-800/80'
+              : supabaseConnected
+                ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/40 dark:border-emerald-900/30 font-bold'
+                : 'bg-amber-100 dark:bg-amber-955/60 text-amber-600 dark:text-amber-400 border border-amber-200/40 dark:border-amber-900/30'
+          }`}>
+            {supabaseConnected === null ? (
+              <RefreshCw size={18} className="animate-spin" />
+            ) : supabaseConnected ? (
+              <Wifi size={18} className="animate-pulse" />
+            ) : (
+              <WifiOff size={18} className="animate-bounce" />
+            )}
+          </div>
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-black uppercase tracking-wider">KẾT NỐI HỆ THỐNG TRỰC TUYẾN</span>
+              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase ${
+                supabaseConnected === null
+                  ? 'bg-zinc-100 text-zinc-500 border border-zinc-200 dark:bg-zinc-800'
+                  : supabaseConnected
+                    ? 'bg-emerald-500 text-white animate-pulse'
+                    : 'bg-amber-500 text-white'
+              }`}>
+                {supabaseConnected === null ? 'ĐANG KIỂM TRA' : supabaseConnected ? 'ONLINE' : 'OFFLINE CHỜĐỒNG BỘ'}
+              </span>
+            </div>
+            <p className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 leading-relaxed max-w-3xl">
+              {supabaseConnected === null ? (
+                'Đang dò tìm kết nối ổn định với đám mây Supabase trực tuyến để xác minh trạng thái đồng bộ...'
+              ) : supabaseConnected ? (
+                'Đã liên thông dữ liệu thời gian thực thành công. Khi đăng nhập Admin, mọi thay đổi, bảng xếp hạng hay tỷ số lập tức cập nhật lên cơ sở dữ liệu chung.'
+              ) : (
+                'Hiện tại không kết nối được Supabase (hoặc chưa cấu hình). Hệ thống tự động chuyển sang sử dụng dữ liệu tạm thời (Local cache), thông tin của bạn không bị mất.'
+              )}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleManualCheck}
+          disabled={isCheckingConn}
+          className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer hover:scale-[1.01] active:scale-[0.99] border select-none shrink-0 ${
+            supabaseConnected === null
+              ? 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700'
+              : supabaseConnected
+                ? 'bg-emerald-600 hover:bg-emerald-555 text-white hover:bg-emerald-500 border-transparent shadow-sm'
+                : 'bg-amber-600 hover:bg-amber-555 text-white hover:bg-amber-500 border-transparent shadow-sm'
+          }`}
+          id="btn-manual-recheck-supabase"
+        >
+          <RefreshCw size={12} className={isCheckingConn ? 'animate-spin' : ''} />
+          {isCheckingConn ? 'Đang dò...' : 'Dò Kết Nối'}
+        </button>
       </div>
 
       {/* GRID THỐNG KÊ LỚN (Chữ to, dễ nhìn, đường biên dày dặn) */}

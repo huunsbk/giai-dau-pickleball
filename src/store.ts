@@ -7,7 +7,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Tournament, Team, Group, Match, AuditLog, TournamentSettings, SeedType, GroupStanding, ThirdPlaceStanding, EventData } from './types';
 import { generateRoundRobinMatches, calculateGroupStandings, calculateBestThirdPlaces, generateKnockoutMatchesSchema, balanceMatchesRestTime } from './utils/tournamentEngine';
-import { supabase } from './supabaseClient';
+import { supabase, checkSupabaseConnection } from './supabaseClient';
 
 interface AppState {
   tournament: Tournament;
@@ -24,8 +24,10 @@ interface AppState {
   currentEventId: string;
   isAdmin: boolean;
   setAdminStatus: (status: boolean) => void;
+  supabaseConnected: boolean | null; // null = checking, true = online, false = using offline/cached data
 
   // Actions
+  checkConnection: () => Promise<boolean>;
   updateTournament: (t: Partial<Tournament>) => void;
   updateSettings: (s: Partial<TournamentSettings>) => void;
   
@@ -369,6 +371,12 @@ export const useTournamentStore = create<AppState>()(
             }
           }
           set({ isAdmin: status });
+        },
+        supabaseConnected: null,
+        checkConnection: async () => {
+          const connected = await checkSupabaseConnection();
+          set({ supabaseConnected: connected });
+          return connected;
         },
 
         updateTournament: (t) => {
@@ -1456,12 +1464,16 @@ export const useTournamentStore = create<AppState>()(
               activeGroupId: activeEvent.activeGroupId,
               advanceSelectionMode: activeEvent.advanceSelectionMode,
               manualQualifiedTeamIds: activeEvent.manualQualifiedTeamIds,
-              logs: logsState
+              logs: logsState,
+              supabaseConnected: true,
             });
 
             console.log('Đồng bộ từ Supabase trực tuyến thành công!');
           } catch (e) {
             console.error('Lỗi khi đồng bộ từ Supabase, chuyển sang chế độ dự phòng Local:', e);
+            originalSet({
+              supabaseConnected: false,
+            });
           }
         },
       };
