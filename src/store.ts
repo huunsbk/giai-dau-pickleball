@@ -1318,10 +1318,70 @@ export const useTournamentStore = create<AppState>()(
           try {
             console.log('Khởi tạo và đồng bộ dữ liệu từ Supabase...');
             
+            // Lấy trạng thái dữ liệu trong store cục bộ trước khi query (khôi phục từ localStorage)
+            const localState = get();
+            const hasLocalTeams = Object.keys(localState.teams || {}).length > 0;
+            const hasLocalMatches = (localState.matches || []).length > 0;
+            const hasLocalData = hasLocalTeams || hasLocalMatches;
+
             // 1. Đọc giải đấu (Tournament metadata)
             const { data: tData, error: tError } = await supabase.from('tournament').select('*');
-            if (tError) throw tError;
+            if (tError) {
+              if (tError.code === '42P01' || tError.message?.includes('relation') || tError.message?.includes('does not exist')) {
+                console.warn('LƯU Ý: Các bảng dữ liệu chưa được khởi tạo trên Supabase. Đang chạy ở chế độ dự phòng Offline.');
+                originalSet({ supabaseConnected: false });
+                return;
+              }
+              throw tError;
+            }
 
+            // 2. Đọc danh sách sự kiện
+            const { data: eData, error: eError } = await supabase.from('events').select('*');
+            if (eError) throw eError;
+
+            // 3. Đọc dữ liệu khác cấu trúc
+            const { data: teamData, error: teamError } = await supabase.from('teams').select('*');
+            if (teamError) throw teamError;
+
+            const { data: groupData, error: groupError } = await supabase.from('groups').select('*');
+            if (groupError) throw groupError;
+
+            const { data: matchData, error: matchError } = await supabase.from('matches').select('*');
+            if (matchError) throw matchError;
+
+            const { data: logData } = await supabase.from('audit_logs').select('*').order('id', { ascending: false }).limit(500);
+
+            const hasRemoteData = (teamData && teamData.length > 0) || (matchData && matchData.length > 0);
+
+            // TÌNH HUỐNG 1: TRÊN CLOUD TRỐNG HOÀN TOÀN NHƯNG DƯỚI CLIENT LẠI CÓ SẴN DỮ LIỆU
+            // Đây là lúc ta vừa kết nối Supabase trống. Nếu là ADMIN, tự động đồng bộ (push) dữ liệu cũ lên cloud!
+            if (!hasRemoteData && hasLocalData) {
+              if (localState.isAdmin) {
+                console.log('Phát hiện cơ sở dữ liệu Supabase online đang trống, nhưng Client lại đang có dữ liệu giải đấu cũ. Đang tự động tải dữ liệu cục bộ lên đám mây làm dữ liệu gốc...');
+                await syncStateToSupabase(localState);
+                
+                // Đồng bộ mảng logs ban đầu nếu có
+                if (localState.logs && localState.logs.length > 0) {
+                  const initialLogs = localState.logs.slice(0, 100).map(l => ({
+                    timestamp: l.timestamp,
+                    action: l.action,
+                    details: l.details
+                  }));
+                  await supabase.from('audit_logs').insert(initialLogs);
+                }
+
+                originalSet({ supabaseConnected: true });
+                console.log('Tự động nạp dữ liệu ban đầu lên Supabase trực tuyến thành công!');
+                return;
+              } else {
+                // Nếu là Viewer vãng lai nhưng Cloud đang trống, ta giữ lại thông tin local cache để hiển thị tránh trắng trang.
+                console.log('Cơ sở dữ liệu Supabase online trống, hiển thị tạm thời trạng thái Local Cache đệm.');
+                originalSet({ supabaseConnected: true });
+                return;
+              }
+            }
+
+            // TÌNH HUỐNG 2: SUPABASE ĐÃ CÓ SẴN DỮ LIỆU THỰT -> TỰ ĐỘNG TẢI VỀ VÀ CẬP NHẬT TRÌNH DUYỆT
             let dbTournament = tData && tData.length > 0 ? tData[0] : null;
             if (!dbTournament) {
               const defaultObj = {
@@ -1333,13 +1393,11 @@ export const useTournamentStore = create<AppState>()(
                 settings: DEFAULT_SETTINGS,
                 currentEventId: 'event-default'
               };
-              await supabase.from('tournament').insert([defaultObj]);
+              if (localState.isAdmin) {
+                await supabase.from('tournament').insert([defaultObj]);
+              }
               dbTournament = defaultObj;
             }
-
-            // 2. Đọc danh sách sự kiện (Events)
-            const { data: eData, error: eError } = await supabase.from('events').select('*');
-            if (eError) throw eError;
 
             let dbEvents = eData || [];
             if (dbEvents.length === 0) {
@@ -1351,17 +1409,13 @@ export const useTournamentStore = create<AppState>()(
                 advanceSelectionMode: 'auto',
                 manualQualifiedTeamIds: []
               };
-              await supabase.from('events').insert([defaultEvt]);
+              if (localState.isAdmin) {
+                await supabase.from('events').insert([defaultEvt]);
+              }
               dbEvents = [defaultEvt];
             }
 
-            // 3. Đọc logs, teams, groups, matches từ Supabase
-            const { data: logData } = await supabase.from('audit_logs').select('*').order('id', { ascending: false }).limit(500);
-            const { data: teamData } = await supabase.from('teams').select('*');
-            const { data: groupData } = await supabase.from('groups').select('*');
-            const { data: matchData } = await supabase.from('matches').select('*');
-
-            // Khởi trúc cấu trúc map của events
+            // Khởi tạo cấu trúc map của events
             const eventsRecord: Record<string, EventData> = {};
             dbEvents.forEach(evt => {
               eventsRecord[evt.id] = {
@@ -1453,7 +1507,7 @@ export const useTournamentStore = create<AppState>()(
               details: l.details
             }));
 
-            // Lưu dữ liệu vào Zustand store đồng bộ
+            // Lưu dữ liệu trực tuyến đồng bộ hoàn chỉnh vào Zustand store
             originalSet({
               tournament: tournamentState,
               events: eventsRecord,
@@ -1468,7 +1522,7 @@ export const useTournamentStore = create<AppState>()(
               supabaseConnected: true,
             });
 
-            console.log('Đồng bộ từ Supabase trực tuyến thành công!');
+            console.log('Nạp dữ liệu trực tuyến từ Supabase thành công!');
           } catch (e) {
             console.error('Lỗi khi đồng bộ từ Supabase, chuyển sang chế độ dự phòng Local:', e);
             originalSet({
