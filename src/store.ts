@@ -209,7 +209,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
           allGroups.push({
             id: g.id,
             name: g.name,
-            team_ids: g.teamIds || [],
+            team_ids: Array.isArray(g.teamIds) ? g.teamIds : [],
             event_id: evtId
           });
           groupIdsInState.push(g.id);
@@ -1532,12 +1532,11 @@ export const useTournamentStore = create<AppState>()(
             loadedTeams.forEach(t => {
               const eventId = t.event_id || t.eventId;
               if (eventsRecord[eventId]) {
-                const groupId = t.group_id !== undefined ? t.group_id : t.groupId;
                 eventsRecord[eventId].teams[t.id] = {
                   id: t.id,
                   name: t.name,
-                  groupId: groupId,
-                  seed: t.seed
+                  groupId: t.group_id !== undefined ? t.group_id : (t.groupId || null),
+                  seed: t.seed || 'none'
                 };
               }
             });
@@ -1547,7 +1546,15 @@ export const useTournamentStore = create<AppState>()(
             loadedGroups.forEach(g => {
               const eventId = g.event_id || g.eventId;
               if (eventsRecord[eventId]) {
-                const teamIds = g.team_ids !== undefined ? g.team_ids : (g.teamIds || []);
+                // Tối ưu hóa chuyên nghiệp: Tự động khôi phục và tính toán các đội thuộc bảng đấu từ dữ liệu 'teams' (đã nạp ở bước trên),
+                // tham khảo thông qua trường group_id để triệt tiêu vĩnh viễn việc bất đồng bộ hoặc lệch dữ liệu JSONB.
+                const fallbackTeamIds = Object.values(eventsRecord[eventId].teams)
+                  .filter(t => t.groupId === g.id)
+                  .map(t => t.id);
+
+                const dbTeamIds = g.team_ids !== undefined ? g.team_ids : (g.teamIds || []);
+                const teamIds = Array.isArray(dbTeamIds) && dbTeamIds.length > 0 ? dbTeamIds : fallbackTeamIds;
+
                 eventsRecord[eventId].groups[g.id] = {
                   id: g.id,
                   name: g.name,
@@ -1561,31 +1568,20 @@ export const useTournamentStore = create<AppState>()(
             loadedMatches.forEach(m => {
               const eventId = m.event_id || m.eventId;
               if (eventsRecord[eventId]) {
-                const groupId = m.group_id !== undefined ? m.group_id : m.groupId;
-                const teamAId = m.team_a_id !== undefined ? m.team_a_id : m.teamAId;
-                const teamBId = m.team_b_id !== undefined ? m.team_b_id : m.teamBId;
-                const scoreA = m.score_a !== undefined ? m.score_a : (m.scoreA !== undefined ? m.scoreA : null);
-                const scoreB = m.score_b !== undefined ? m.score_b : (m.scoreB !== undefined ? m.scoreB : null);
-                const winnerId = m.winner_id !== undefined ? m.winner_id : m.winnerId;
-                const knockoutRoundName = m.knockout_round_name !== undefined ? m.knockout_round_name : m.knockoutRoundName;
-                const knockoutMatchId = m.knockout_match_id !== undefined ? m.knockout_match_id : m.knockoutMatchId;
-                const nextMatchId = m.next_match_id !== undefined ? m.next_match_id : m.nextMatchId;
-                const nextMatchSlot = m.next_match_slot !== undefined ? m.next_match_slot : m.nextMatchSlot;
-
                 eventsRecord[eventId].matches.push({
                   id: m.id,
-                  groupId: groupId,
-                  teamAId: teamAId,
-                  teamBId: teamBId,
-                  scoreA: scoreA,
-                  scoreB: scoreB,
-                  winnerId: winnerId,
+                  groupId: m.group_id !== undefined ? m.group_id : (m.groupId || null),
+                  teamAId: m.team_a_id !== undefined ? m.team_a_id : (m.teamAId || null),
+                  teamBId: m.team_b_id !== undefined ? m.team_b_id : (m.teamBId || null),
+                  scoreA: m.score_a !== undefined && m.score_a !== null ? m.score_a : (m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : null),
+                  scoreB: m.score_b !== undefined && m.score_b !== null ? m.score_b : (m.scoreB !== undefined && m.scoreB !== null ? m.scoreB : null),
+                  winnerId: m.winner_id !== undefined ? m.winner_id : (m.winnerId || null),
                   status: m.status,
                   round: m.round,
-                  knockoutRoundName: knockoutRoundName,
-                  knockoutMatchId: knockoutMatchId,
-                  nextMatchId: nextMatchId,
-                  nextMatchSlot: nextMatchSlot
+                  knockoutRoundName: m.knockout_round_name !== undefined ? m.knockout_round_name : (m.knockoutRoundName || null),
+                  knockoutMatchId: m.knockout_match_id !== undefined ? m.knockout_match_id : (m.knockoutMatchId || null),
+                  nextMatchId: m.next_match_id !== undefined ? m.next_match_id : (m.nextMatchId || null),
+                  nextMatchSlot: m.next_match_slot !== undefined ? m.next_match_slot : (m.nextMatchSlot || null)
                 });
               }
             });

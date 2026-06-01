@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { useTournamentStore } from '../store';
+import { supabase } from '../supabaseClient';
 import { Trophy, Users, Layers, Calendar, Play, Download, Upload, Trash2, Check, AlertCircle, MapPin, CalendarDays, PlusCircle, LayoutGrid, Award, Sparkles, FileText, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 
 export default function Dashboard() {
@@ -221,7 +222,7 @@ export default function Dashboard() {
     reader.readAsText(file);
   };
 
-  const handleImportJson = () => {
+  const handleImportJson = async () => {
     try {
       const parsed = JSON.parse(jsonInput);
       if (!parsed.tournament) {
@@ -260,14 +261,187 @@ export default function Dashboard() {
         payload.manualQualifiedTeamIds = parsed.manualQualifiedTeamIds;
       }
 
+      // Set state locally first
       useTournamentStore.setState(payload);
+
+      // Extract collections to upsert to Supabase directly
+      const eventsToUpsert: any[] = [];
+      const teamsToUpsert: any[] = [];
+      const groupsToUpsert: any[] = [];
+      const matchesToUpsert: any[] = [];
+
+      if (parsed.events) {
+        Object.keys(parsed.events).forEach(evtId => {
+          const evt = parsed.events[evtId];
+          eventsToUpsert.push({
+            id: evt.id,
+            name: evt.name,
+            settings: evt.settings || parsed.tournament?.settings || {},
+            active_group_id: evt.activeGroupId !== undefined ? evt.activeGroupId : (evt.active_group_id || null),
+            advance_selection_mode: evt.advanceSelectionMode || 'auto',
+            manual_qualified_team_ids: evt.manualQualifiedTeamIds || []
+          });
+
+          if (evt.teams) {
+            Object.values(evt.teams).forEach((t: any) => {
+              teamsToUpsert.push({
+                id: t.id,
+                name: t.name,
+                group_id: t.groupId !== undefined ? t.groupId : (t.group_id || null),
+                seed: t.seed || 'none',
+                event_id: evtId
+              });
+            });
+          }
+
+          if (evt.groups) {
+            Object.values(evt.groups).forEach((g: any) => {
+              groupsToUpsert.push({
+                id: g.id,
+                name: g.name,
+                team_ids: Array.isArray(g.teamIds) ? g.teamIds : (Array.isArray(g.team_ids) ? g.team_ids : []),
+                event_id: evtId
+              });
+            });
+          }
+
+          if (evt.matches) {
+            evt.matches.forEach((m: any) => {
+              matchesToUpsert.push({
+                id: m.id,
+                group_id: m.groupId !== undefined ? m.groupId : (m.group_id || null),
+                team_a_id: m.teamAId !== undefined ? m.teamAId : (m.team_a_id || null),
+                team_b_id: m.teamBId !== undefined ? m.teamBId : (m.team_b_id || null),
+                score_a: m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : (m.score_a !== undefined && m.score_a !== null ? m.score_a : null),
+                score_b: m.scoreB !== undefined && m.scoreB !== null ? m.scoreB : (m.score_b !== undefined && m.score_b !== null ? m.score_b : null),
+                winner_id: m.winnerId !== undefined ? m.winnerId : (m.winner_id || null),
+                status: m.status || 'pending',
+                round: m.round,
+                knockout_round_name: m.knockoutRoundName !== undefined ? m.knockoutRoundName : (m.knockout_round_name || null),
+                knockout_match_id: m.knockoutMatchId !== undefined ? m.knockoutMatchId : (m.knockout_match_id || null),
+                next_match_id: m.nextMatchId !== undefined ? m.nextMatchId : (m.next_match_id || null),
+                next_match_slot: m.nextMatchSlot !== undefined ? m.nextMatchSlot : (m.next_match_slot || null),
+                event_id: evtId
+              });
+            });
+          }
+        });
+      } else {
+        // Fallback for single-event older backups
+        const defEvtId = parsed.currentEventId || 'event-default';
+        eventsToUpsert.push({
+          id: defEvtId,
+          name: parsed.currentEventName || 'Đôi Nam Chuyên Nghiệp',
+          settings: parsed.tournament?.settings || {},
+          active_group_id: parsed.activeGroupId || null,
+          advance_selection_mode: parsed.advanceSelectionMode || 'auto',
+          manual_qualified_team_ids: parsed.manualQualifiedTeamIds || []
+        });
+
+        if (parsed.teams) {
+          Object.values(parsed.teams).forEach((t: any) => {
+            teamsToUpsert.push({
+              id: t.id,
+              name: t.name,
+              group_id: t.groupId !== undefined ? t.groupId : (t.group_id || null),
+              seed: t.seed || 'none',
+              event_id: defEvtId
+            });
+          });
+        }
+
+        if (parsed.groups) {
+          Object.values(parsed.groups).forEach((g: any) => {
+            groupsToUpsert.push({
+              id: g.id,
+              name: g.name,
+              team_ids: Array.isArray(g.teamIds) ? g.teamIds : (Array.isArray(g.team_ids) ? g.team_ids : []),
+              event_id: defEvtId
+            });
+          });
+        }
+
+        if (parsed.matches) {
+          parsed.matches.forEach((m: any) => {
+            matchesToUpsert.push({
+              id: m.id,
+              group_id: m.groupId !== undefined ? m.groupId : (m.group_id || null),
+              team_a_id: m.teamAId !== undefined ? m.teamAId : (m.team_a_id || null),
+              team_b_id: m.teamBId !== undefined ? m.teamBId : (m.team_b_id || null),
+              score_a: m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : (m.score_a !== undefined && m.score_a !== null ? m.score_a : null),
+              score_b: m.scoreB !== undefined && m.scoreB !== null ? m.scoreB : (m.score_b !== undefined && m.score_b !== null ? m.score_b : null),
+              winner_id: m.winnerId !== undefined ? m.winnerId : (m.winner_id || null),
+              status: m.status || 'pending',
+              round: m.round,
+              knockout_round_name: m.knockoutRoundName !== undefined ? m.knockoutRoundName : (m.knockout_round_name || null),
+              knockout_match_id: m.knockoutMatchId !== undefined ? m.knockoutMatchId : (m.knockout_match_id || null),
+              next_match_id: m.nextMatchId !== undefined ? m.next_match_id : (m.next_match_id || null),
+              next_match_slot: m.nextMatchSlot !== undefined ? m.next_match_slot : (m.next_match_slot || null),
+              event_id: defEvtId
+            });
+          });
+        }
+      }
+
+      // Check remote database availability
+      if (supabaseConnected) {
+        console.log('Đồng bộ sao lưu JSON trực tiếp lên Supabase bằng .upsert()...');
+        
+        // 1. Upsert tournament
+        const { error: tErr } = await supabase.from('tournament').upsert({
+          id: parsed.tournament.id || 't-1',
+          name: parsed.tournament.name,
+          organization: parsed.tournament.organization,
+          location: parsed.tournament.location,
+          date: parsed.tournament.date,
+          settings: parsed.tournament.settings,
+          current_event_id: parsed.currentEventId || 'event-default'
+        });
+        if (tErr) {
+          console.error('Supabase Import ERROR (tournament):', tErr.message, tErr.details);
+        }
+
+        // 2. Upsert events
+        if (eventsToUpsert.length > 0) {
+          const { error: eErr } = await supabase.from('events').upsert(eventsToUpsert);
+          if (eErr) {
+            console.error('Supabase Import ERROR (events):', eErr.message, eErr.details);
+          }
+        }
+
+        // 3. Upsert teams
+        if (teamsToUpsert.length > 0) {
+          const { error: tmErr } = await supabase.from('teams').upsert(teamsToUpsert);
+          if (tmErr) {
+            console.error('Supabase Import ERROR (teams):', tmErr.message, tmErr.details);
+          }
+        }
+
+        // 4. Upsert groups
+        if (groupsToUpsert.length > 0) {
+          const { error: gErr } = await supabase.from('groups').upsert(groupsToUpsert);
+          if (gErr) {
+            console.error('Supabase Import ERROR (groups):', gErr.message, gErr.details);
+          }
+        }
+
+        // 5. Upsert matches
+        if (matchesToUpsert.length > 0) {
+          const { error: mErr } = await supabase.from('matches').upsert(matchesToUpsert);
+          if (mErr) {
+            console.error('Supabase Import ERROR (matches):', mErr.message, mErr.details);
+          }
+        }
+      }
+
       addLog('Khôi Phục', 'Đã khôi phục toàn bộ cấu hình giải đấu & tất cả danh mục nội dung thi đấu thành công từ sao lưu JSON.');
       setShowJsonModal(false);
       setJsonInput('');
       setDragActive(false);
       showToast('Khôi phục hệ thống giải đấu thành công!');
-    } catch (e) {
-      showToast('Lỗi phân tích cú pháp JSON. Hãy kiểm tra lại định dạng chuỗi.');
+    } catch (e: any) {
+      console.error('Lỗi phân tích hoặc tải dữ liệu JSON:', e);
+      showToast('Lỗi khôi phục sao lưu: ' + (e.message || 'vui lòng kiểm tra lại định dạng chuỗi.'));
     }
   };
 
