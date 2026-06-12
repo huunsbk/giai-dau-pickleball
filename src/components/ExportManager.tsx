@@ -33,6 +33,7 @@ export default function ExportManager() {
   const [selectedEventFilter, setSelectedEventFilter] = useState<string>('all');
   const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
+  const [printOnlyMatches, setPrintOnlyMatches] = useState(true);
 
   const eventList = Object.values(events || {});
 
@@ -375,7 +376,7 @@ export default function ExportManager() {
     <div className="space-y-6" id="export-manager-root">
       
       {/* Tiêu đề & Giới thiệu */}
-      <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 space-y-2">
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 space-y-2 print:hidden">
         <div className="flex items-center gap-2.5">
           <div className="p-2.5 bg-blue-50 dark:bg-blue-955 text-blue-600 rounded-xl">
             <FileDown size={22} className="stroke-[2.5]" />
@@ -390,7 +391,7 @@ export default function ExportManager() {
       </div>
 
       {/* Cấu hình dữ liệu chọn lọc để xuất */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
         
         {/* Cột trái: Bộ chọn và thông số */}
         <div className="lg:col-span-2 space-y-5">
@@ -501,14 +502,46 @@ export default function ExportManager() {
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 mt-4">
+              {/* Tùy chọn phạm vi In dữ liệu */}
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-150 dark:border-zinc-850 space-y-2.5">
+                <label className="flex items-start gap-2 text-[11px] font-black text-zinc-700 dark:text-zinc-200 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={printOnlyMatches}
+                    onChange={(e) => setPrintOnlyMatches(e.target.checked)}
+                    className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer h-3.5 w-3.5"
+                  />
+                  <span>Chỉ lấy dữ liệu Lịch thi đấu & Kết quả (Ẩn Bảng xếp hạng)</span>
+                </label>
+                <p className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-relaxed pl-5">
+                  Khi bật (mặc định), hệ thống sẽ ẩn phần bảng xếp hạng vòng bảng để bản in/PDF <strong>chỉ lấy dữ liệu từ trang lịch thi đấu đến hết</strong>.
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 mt-2 space-y-3">
                 <button
-                  onClick={() => window.print()}
-                  className="w-full py-3 bg-indigo-650 hover:bg-indigo-550 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all uppercase tracking-wider select-none hover:scale-[1.01]"
+                  onClick={() => {
+                    try {
+                      window.focus();
+                      window.print();
+                    } catch (e) {
+                      console.warn('In trực tiếp thất bại trong iframe:', e);
+                    }
+                  }}
+                  className="w-full py-3 bg-[#0c7d5d] hover:bg-[#0c7d5d]/90 text-white font-extrabold rounded-[14px] text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all uppercase tracking-wider select-none hover:scale-[1.01]"
                 >
                   <Printer size={15} />
                   <span>Mở Trình In / Lưu PDF</span>
                 </button>
+
+                {window.self !== window.top && (
+                  <div className="p-3 bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 rounded-xl space-y-1">
+                    <p className="text-[10.5px] text-amber-850 dark:text-amber-400 font-bold leading-relaxed flex items-start gap-1">
+                      <span className="shrink-0 text-amber-500">⚠️</span>
+                      <span>Bạn đang sử dụng khung xem thử (iFrame). Trực tiếp bấm "In" có thể bị trình duyệt hạn chế. Hãy bấm <strong>"Mở trong tab mới" (Open in new tab)</strong> ở thanh công cụ góc trên để in ấn / lưu PDF mượt mà nhất!</span>
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -566,8 +599,8 @@ export default function ExportManager() {
       </div>
 
       {/* KHU VỰC BẢN XEM TRƯỚC HÌNH ẢNH TRƯỚC KHI IN (PRINT PREVIEW AREA) */}
-      <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 space-y-4">
-        <div className="border-b border-zinc-100 dark:border-zinc-800 pb-3 flex items-center justify-between">
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 space-y-4 print:border-none print:p-0 print:bg-transparent print:space-y-0">
+        <div className="border-b border-zinc-100 dark:border-zinc-800 pb-3 flex items-center justify-between print:hidden">
           <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
             <CalendarDays size={14} /> 2. Bản xem trước nội dung in ấn
           </h3>
@@ -589,7 +622,7 @@ export default function ExportManager() {
           }
 
           return (
-            <div className="space-y-8 bg-zinc-50/50 dark:bg-zinc-950/30 p-4 sm:p-6 rounded-xl border border-zinc-100 dark:border-zinc-800 max-h-[500px] overflow-y-auto">
+            <div className="space-y-8 bg-zinc-50/50 dark:bg-zinc-950/30 p-4 sm:p-6 rounded-xl border border-zinc-100 dark:border-zinc-800 max-h-[500px] overflow-y-auto print:max-h-none print:overflow-visible print:border-none print:p-0 print:bg-transparent">
               {eventsToRender.map((evt) => {
                 const stdByGrp = getEventStandings(evt);
                 const evtGroups = Object.values(evt.groups || {});
@@ -607,48 +640,50 @@ export default function ExportManager() {
                     </div>
 
                     {/* Vòng bảng */}
-                    <div className="space-y-3">
-                      <h3 className="text-xs font-bold uppercase text-zinc-805 dark:text-zinc-200 flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5 rounded-full bg-blue-600"></span>
-                        Bảng xếp hạng vòng bảng
-                      </h3>
-                      {evtGroups.length === 0 ? (
-                        <p className="text-[11px] text-zinc-400 italic pl-3">Nội dung này không chia bảng.</p>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {evtGroups.map((group) => {
-                            const std = stdByGrp[group.id] || [];
-                            return (
-                              <div key={group.id} className="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
-                                <div className="bg-zinc-50 dark:bg-zinc-950 px-3 py-1.5 border-b border-zinc-200 dark:border-zinc-800">
-                                  <span className="text-[11px] font-black uppercase text-blue-600 dark:text-blue-400">{group.name}</span>
-                                </div>
-                                <table className="w-full text-left border-collapse">
-                                  <thead>
-                                    <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/20 text-[10px] text-zinc-400 font-bold">
-                                      <th className="px-3 py-1.5 text-center w-12">Hạng</th>
-                                      <th className="px-3 py-1.5">Đội / VĐV</th>
-                                      <th className="px-3 py-1.5 text-center w-16">Số trận</th>
-                                      <th className="px-3 py-1.5 text-right w-16">Điểm</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {std.map((s, idx) => (
-                                      <tr key={s.teamId} className="border-b border-zinc-150/50 dark:border-zinc-850 text-[11px] hover:bg-zinc-50/30">
-                                        <td className="px-3 py-1.5 text-center font-bold text-zinc-400">{idx + 1}</td>
-                                        <td className="px-3 py-1.5 font-bold text-zinc-700 dark:text-zinc-300">{s.teamName}</td>
-                                        <td className="px-3 py-1.5 text-center text-zinc-450">{s.matchesPlayed}</td>
-                                        <td className="px-3 py-1.5 text-right font-black text-blue-600">{s.points}</td>
+                    {!printOnlyMatches && (
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-bold uppercase text-zinc-805 dark:text-zinc-200 flex items-center gap-1.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-600"></span>
+                          Bảng xếp hạng vòng bảng
+                        </h3>
+                        {evtGroups.length === 0 ? (
+                          <p className="text-[11px] text-zinc-400 italic pl-3">Nội dung này không chia bảng.</p>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {evtGroups.map((group) => {
+                              const std = stdByGrp[group.id] || [];
+                              return (
+                                <div key={group.id} className="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
+                                  <div className="bg-zinc-50 dark:bg-zinc-950 px-3 py-1.5 border-b border-zinc-200 dark:border-zinc-800">
+                                    <span className="text-[11px] font-black uppercase text-blue-600 dark:text-blue-400">{group.name}</span>
+                                  </div>
+                                  <table className="w-full text-left border-collapse">
+                                    <thead>
+                                      <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/20 text-[10px] text-zinc-400 font-bold">
+                                        <th className="px-3 py-1.5 text-center w-12">Hạng</th>
+                                        <th className="px-3 py-1.5">Đội / VĐV</th>
+                                        <th className="px-3 py-1.5 text-center w-16">Số trận</th>
+                                        <th className="px-3 py-1.5 text-right w-16">Điểm</th>
                                       </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                                    </thead>
+                                    <tbody>
+                                      {std.map((s, idx) => (
+                                        <tr key={s.teamId} className="border-b border-zinc-150/50 dark:border-zinc-850 text-[11px] hover:bg-zinc-50/30">
+                                          <td className="px-3 py-1.5 text-center font-bold text-zinc-400">{idx + 1}</td>
+                                          <td className="px-3 py-1.5 font-bold text-zinc-700 dark:text-zinc-300">{s.teamName}</td>
+                                          <td className="px-3 py-1.5 text-center text-zinc-450">{s.matchesPlayed}</td>
+                                          <td className="px-3 py-1.5 text-right font-black text-blue-600">{s.points}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Danh sách trận đấu */}
                     <div className="space-y-3">
