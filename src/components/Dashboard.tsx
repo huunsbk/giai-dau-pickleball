@@ -230,41 +230,74 @@ export default function Dashboard() {
         return;
       }
 
-      // Restore elements with high tolerance for older backups
-      const payload: any = {
-        tournament: parsed.tournament,
-        teams: parsed.teams || {},
-        groups: parsed.groups || {},
-        matches: parsed.matches || [],
-        logs: parsed.logs || [],
+      // 1. Tạo bản đồ tra cứu từ groupId -> eventId từ groups cũng như matches trong JSON
+      const groupIdToEventIdMap = new Map<string, string>();
+      
+      const getTeamsArray = (teamsData: any): any[] => {
+        if (!teamsData) return [];
+        if (Array.isArray(teamsData)) return teamsData;
+        return Object.values(teamsData);
       };
 
+      const getGroupsArray = (groupsData: any): any[] => {
+        if (!groupsData) return [];
+        if (Array.isArray(groupsData)) return groupsData;
+        return Object.values(groupsData);
+      };
+
+      // Điền bản đồ từ parsed.events
       if (parsed.events) {
-        payload.events = parsed.events;
-      }
-      if (parsed.currentEventId) {
-        payload.currentEventId = parsed.currentEventId;
-      }
-      if (parsed.darkMode !== undefined) {
-        payload.darkMode = parsed.darkMode;
-      }
-      if (parsed.selectedTab) {
-        payload.selectedTab = parsed.selectedTab;
-      }
-      if (parsed.activeGroupId !== undefined) {
-        payload.activeGroupId = parsed.activeGroupId;
-      }
-      if (parsed.advanceSelectionMode) {
-        payload.advanceSelectionMode = parsed.advanceSelectionMode;
-      }
-      if (parsed.manualQualifiedTeamIds) {
-        payload.manualQualifiedTeamIds = parsed.manualQualifiedTeamIds;
+        Object.keys(parsed.events).forEach(evtId => {
+          const evt = parsed.events[evtId];
+          if (evt) {
+            const gps = getGroupsArray(evt.groups);
+            gps.forEach((g: any) => {
+              if (g && g.id) {
+                groupIdToEventIdMap.set(g.id, evtId);
+              }
+            });
+            if (evt.matches) {
+              evt.matches.forEach((m: any) => {
+                if (m && m.groupId && !groupIdToEventIdMap.has(m.groupId)) {
+                  groupIdToEventIdMap.set(m.groupId, evtId);
+                }
+              });
+            }
+          }
+        });
       }
 
-      // Set state locally first
-      useTournamentStore.setState(payload);
+      // Điền bản đồ từ root (fallback cho dữ liệu cũ)
+      if (parsed.groups) {
+        const rootGroups = getGroupsArray(parsed.groups);
+        rootGroups.forEach((g: any) => {
+          if (g && g.id) {
+            groupIdToEventIdMap.set(g.id, parsed.currentEventId || 'event-default');
+          }
+        });
+      }
+      if (parsed.matches) {
+        parsed.matches.forEach((m: any) => {
+          if (m && m.groupId && !groupIdToEventIdMap.has(m.groupId)) {
+            groupIdToEventIdMap.set(m.groupId, parsed.currentEventId || 'event-default');
+          }
+        });
+      }
 
-      // Extract collections to upsert to Supabase directly
+      // Hàm xác định eventId của một Team chuẩn xác
+      const getTeamEventId = (t: any, loopEventId: string): string => {
+        if (t.eventId) return t.eventId;
+        if (t.event_id) return t.event_id;
+        const gId = t.groupId || t.group_id;
+        if (gId && groupIdToEventIdMap.has(gId)) {
+          return groupIdToEventIdMap.get(gId)!;
+        }
+        return loopEventId || parsed.currentEventId || 'event-default';
+      };
+
+      // 2. Chuẩn hóa cấu trúc để ghi đè vào Local Zustand Store
+      // Zustand cục bộ yêu cầu teams & groups lưu dạng { [id]: Object } để phục vụ hiển thị trực quan tức thì.
+      const localEventsRecord: Record<string, any> = {};
       const eventsToUpsert: any[] = [];
       const teamsToUpsert: any[] = [];
       const groupsToUpsert: any[] = [];
@@ -273,96 +306,148 @@ export default function Dashboard() {
       if (parsed.events) {
         Object.keys(parsed.events).forEach(evtId => {
           const evt = parsed.events[evtId];
-          eventsToUpsert.push({
-            id: evt.id,
-            name: evt.name,
-            settings: evt.settings || parsed.tournament?.settings || {},
-            active_group_id: evt.activeGroupId !== undefined ? evt.activeGroupId : (evt.active_group_id || null),
-            advance_selection_mode: evt.advanceSelectionMode || 'auto',
-            manual_qualified_team_ids: evt.manualQualifiedTeamIds || []
-          });
+          if (evt) {
+            const normalizedTeamsObj: Record<string, any> = {};
+            const normalizedGroupsObj: Record<string, any> = {};
+            const matchesArr = Array.isArray(evt.matches) ? evt.matches : [];
 
-          if (evt.teams) {
-            Object.values(evt.teams).forEach((t: any) => {
-              teamsToUpsert.push({
-                id: t.id,
-                name: t.name,
-                group_id: t.groupId !== undefined ? t.groupId : (t.group_id || null),
-                seed: t.seed || 'none',
-                event_id: evtId
-              });
+            // Thu thập và chuyển đổi Teams từ Object/Array sang Record
+            const tList = getTeamsArray(evt.teams);
+            tList.forEach((t: any) => {
+              if (t && t.id) {
+                const normTeam = {
+                  id: t.id,
+                  name: t.name,
+                  groupId: t.groupId !== undefined ? t.groupId : (t.group_id || null),
+                  seed: t.seed || 'none',
+                };
+                normalizedTeamsObj[t.id] = normTeam;
+
+                // Thêm vào hàng đợi gửi Supabase
+                teamsToUpsert.push({
+                  id: t.id,
+                  name: t.name,
+                  group_id: normTeam.groupId,
+                  seed: normTeam.seed,
+                  event_id: getTeamEventId(t, evtId)
+                });
+              }
             });
-          }
 
-          if (evt.groups) {
-            Object.values(evt.groups).forEach((g: any) => {
-              groupsToUpsert.push({
-                id: g.id,
-                name: g.name,
-                team_ids: Array.isArray(g.teamIds) ? g.teamIds : (Array.isArray(g.team_ids) ? g.team_ids : []),
-                event_id: evtId
-              });
+            // Thu thập và chuyển đổi Groups
+            const gList = getGroupsArray(evt.groups);
+            gList.forEach((g: any) => {
+              if (g && g.id) {
+                normalizedGroupsObj[g.id] = {
+                  id: g.id,
+                  name: g.name,
+                  teamIds: Array.isArray(g.teamIds) ? g.teamIds : (Array.isArray(g.team_ids) ? g.team_ids : []),
+                };
+
+                // Thêm vào hàng đợi gửi Supabase
+                groupsToUpsert.push({
+                  id: g.id,
+                  name: g.name,
+                  team_ids: normalizedGroupsObj[g.id].teamIds,
+                  event_id: evtId
+                });
+              }
             });
-          }
 
-          if (evt.matches) {
-            evt.matches.forEach((m: any) => {
-              matchesToUpsert.push({
-                id: m.id,
-                group_id: m.groupId !== undefined ? m.groupId : (m.group_id || null),
-                team_a_id: m.teamAId !== undefined ? m.teamAId : (m.team_a_id || null),
-                team_b_id: m.teamBId !== undefined ? m.teamBId : (m.team_b_id || null),
-                score_a: m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : (m.score_a !== undefined && m.score_a !== null ? m.score_a : null),
-                score_b: m.scoreB !== undefined && m.scoreB !== null ? m.scoreB : (m.score_b !== undefined && m.score_b !== null ? m.score_b : null),
-                winner_id: m.winnerId !== undefined ? m.winnerId : (m.winner_id || null),
-                status: m.status || 'pending',
-                round: m.round,
-                knockout_round_name: m.knockoutRoundName !== undefined ? m.knockoutRoundName : (m.knockout_round_name || null),
-                knockout_match_id: m.knockoutMatchId !== undefined ? m.knockoutMatchId : (m.knockout_match_id || null),
-                next_match_id: m.nextMatchId !== undefined ? m.nextMatchId : (m.next_match_id || null),
-                next_match_slot: m.nextMatchSlot !== undefined ? m.nextMatchSlot : (m.next_match_slot || null),
-                event_id: evtId
-              });
+            // Thu thập Matches
+            matchesArr.forEach((m: any) => {
+              if (m && m.id) {
+                matchesToUpsert.push({
+                  id: m.id,
+                  group_id: m.groupId !== undefined ? m.groupId : (m.group_id || null),
+                  team_a_id: m.teamAId !== undefined ? m.teamAId : (m.team_a_id || null),
+                  team_b_id: m.teamBId !== undefined ? m.teamBId : (m.team_b_id || null),
+                  score_a: m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : (m.score_a !== undefined && m.score_a !== null ? m.score_a : null),
+                  score_b: m.scoreB !== undefined && m.scoreB !== null ? m.scoreB : (m.score_b !== undefined && m.score_b !== null ? m.score_b : null),
+                  winner_id: m.winnerId !== undefined ? m.winnerId : (m.winner_id || null),
+                  status: m.status || 'pending',
+                  round: m.round,
+                  knockout_round_name: m.knockoutRoundName !== undefined ? m.knockoutRoundName : (m.knockout_round_name || null),
+                  knockout_match_id: m.knockoutMatchId !== undefined ? m.knockoutMatchId : (m.knockout_match_id || null),
+                  next_match_id: m.nextMatchId !== undefined ? m.nextMatchId : (m.next_match_id || null),
+                  next_match_slot: m.nextMatchSlot !== undefined ? m.nextMatchSlot : (m.next_match_slot || null),
+                  event_id: evtId
+                });
+              }
+            });
+
+            // Đưa vào danh sách sự kiện cục bộ
+            localEventsRecord[evtId] = {
+              id: evt.id,
+              name: evt.name,
+              settings: evt.settings || parsed.tournament?.settings || {},
+              activeGroupId: evt.activeGroupId !== undefined ? evt.activeGroupId : (evt.active_group_id || null),
+              advanceSelectionMode: evt.advanceSelectionMode || 'auto',
+              manualQualifiedTeamIds: evt.manualQualifiedTeamIds || [],
+              teams: normalizedTeamsObj,
+              groups: normalizedGroupsObj,
+              matches: matchesArr
+            };
+
+            // Thêm vào hàng đợi gửi Supabase
+            eventsToUpsert.push({
+              id: evt.id,
+              name: evt.name,
+              settings: evt.settings || parsed.tournament?.settings || {},
+              active_group_id: evt.activeGroupId !== undefined ? evt.activeGroupId : (evt.active_group_id || null),
+              advance_selection_mode: evt.advanceSelectionMode || 'auto',
+              manual_qualified_team_ids: evt.manualQualifiedTeamIds || []
             });
           }
         });
       } else {
-        // Fallback for single-event older backups
+        // Fallback cho Tournament chỉ có 1 Event cũ
         const defEvtId = parsed.currentEventId || 'event-default';
-        eventsToUpsert.push({
-          id: defEvtId,
-          name: parsed.currentEventName || 'Đôi Nam Chuyên Nghiệp',
-          settings: parsed.tournament?.settings || {},
-          active_group_id: parsed.activeGroupId || null,
-          advance_selection_mode: parsed.advanceSelectionMode || 'auto',
-          manual_qualified_team_ids: parsed.manualQualifiedTeamIds || []
-        });
+        const normalizedTeamsObj: Record<string, any> = {};
+        const normalizedGroupsObj: Record<string, any> = {};
+        const matchesArr = Array.isArray(parsed.matches) ? parsed.matches : [];
 
-        if (parsed.teams) {
-          Object.values(parsed.teams).forEach((t: any) => {
+        const tList = getTeamsArray(parsed.teams);
+        tList.forEach((t: any) => {
+          if (t && t.id) {
+            const normTeam = {
+              id: t.id,
+              name: t.name,
+              groupId: t.groupId !== undefined ? t.groupId : (t.group_id || null),
+              seed: t.seed || 'none'
+            };
+            normalizedTeamsObj[t.id] = normTeam;
+
             teamsToUpsert.push({
               id: t.id,
               name: t.name,
-              group_id: t.groupId !== undefined ? t.groupId : (t.group_id || null),
-              seed: t.seed || 'none',
-              event_id: defEvtId
+              group_id: normTeam.groupId,
+              seed: normTeam.seed,
+              event_id: getTeamEventId(t, defEvtId)
             });
-          });
-        }
+          }
+        });
 
-        if (parsed.groups) {
-          Object.values(parsed.groups).forEach((g: any) => {
+        const gList = getGroupsArray(parsed.groups);
+        gList.forEach((g: any) => {
+          if (g && g.id) {
+            normalizedGroupsObj[g.id] = {
+              id: g.id,
+              name: g.name,
+              teamIds: Array.isArray(g.teamIds) ? g.teamIds : (Array.isArray(g.team_ids) ? g.team_ids : [])
+            };
+
             groupsToUpsert.push({
               id: g.id,
               name: g.name,
-              team_ids: Array.isArray(g.teamIds) ? g.teamIds : (Array.isArray(g.team_ids) ? g.team_ids : []),
+              team_ids: normalizedGroupsObj[g.id].teamIds,
               event_id: defEvtId
             });
-          });
-        }
+          }
+        });
 
-        if (parsed.matches) {
-          parsed.matches.forEach((m: any) => {
+        matchesArr.forEach((m: any) => {
+          if (m && m.id) {
             matchesToUpsert.push({
               id: m.id,
               group_id: m.groupId !== undefined ? m.groupId : (m.group_id || null),
@@ -375,99 +460,151 @@ export default function Dashboard() {
               round: m.round,
               knockout_round_name: m.knockoutRoundName !== undefined ? m.knockoutRoundName : (m.knockout_round_name || null),
               knockout_match_id: m.knockoutMatchId !== undefined ? m.knockoutMatchId : (m.knockout_match_id || null),
-              next_match_id: m.nextMatchId !== undefined ? m.next_match_id : (m.next_match_id || null),
-              next_match_slot: m.nextMatchSlot !== undefined ? m.next_match_slot : (m.next_match_slot || null),
+              next_match_id: m.nextMatchId !== undefined ? m.nextMatchId : (m.next_match_id || null),
+              next_match_slot: m.nextMatchSlot !== undefined ? m.nextMatchSlot : (m.next_match_slot || null),
               event_id: defEvtId
             });
-          });
-        }
+          }
+        });
+
+        // Tạo 1 event mặc định
+        localEventsRecord[defEvtId] = {
+          id: defEvtId,
+          name: parsed.currentEventName || 'Đôi Nam Chuyên Nghiệp',
+          settings: parsed.tournament?.settings || {},
+          activeGroupId: parsed.activeGroupId || null,
+          advanceSelectionMode: parsed.advanceSelectionMode || 'auto',
+          manualQualifiedTeamIds: parsed.manualQualifiedTeamIds || [],
+          teams: normalizedTeamsObj,
+          groups: normalizedGroupsObj,
+          matches: matchesArr
+        };
+
+        eventsToUpsert.push({
+          id: defEvtId,
+          name: parsed.currentEventName || 'Đôi Nam Chuyên Nghiệp',
+          settings: parsed.tournament?.settings || {},
+          active_group_id: parsed.activeGroupId || null,
+          advance_selection_mode: parsed.advanceSelectionMode || 'auto',
+          manual_qualified_team_ids: parsed.manualQualifiedTeamIds || []
+        });
       }
 
-      // Check remote database availability
+      // 3. Khử trùng các bản ghi bằng ID (khắc phục hoàn toàn lỗi ON CONFLICT DO UPDATE Command cannot affect row a second time)
+      const uniqueById = <T extends { id: string }>(arr: T[]): T[] => {
+        const map = new Map<string, T>();
+        arr.forEach(item => {
+          if (item && item.id) {
+            map.set(item.id, item);
+          }
+        });
+        return Array.from(map.values());
+      };
+
+      const uniqueEventsToUpsert = uniqueById(eventsToUpsert);
+      const uniqueGroupsToUpsert = uniqueById(groupsToUpsert);
+      const uniqueTeamsToUpsert = uniqueById(teamsToUpsert);
+      const uniqueMatchesToUpsert = uniqueById(matchesToUpsert);
+
+      const targetEventId = parsed.currentEventId || Object.keys(localEventsRecord)[0] || 'event-default';
+      const targetEventObj = localEventsRecord[targetEventId] || {
+        teams: {},
+        groups: {},
+        matches: [],
+        activeGroupId: null,
+        advanceSelectionMode: 'auto',
+        manualQualifiedTeamIds: []
+      };
+
+      // Đóng gói payload hoàn chỉnh để nạp tức thì vào Zustand Store
+      const localStatePayload: any = {
+        tournament: parsed.tournament,
+        events: localEventsRecord,
+        currentEventId: targetEventId,
+        teams: targetEventObj.teams,
+        groups: targetEventObj.groups,
+        matches: targetEventObj.matches,
+        activeGroupId: targetEventObj.activeGroupId,
+        advanceSelectionMode: targetEventObj.advanceSelectionMode,
+        manualQualifiedTeamIds: targetEventObj.manualQualifiedTeamIds,
+        logs: parsed.logs || []
+      };
+
+      if (parsed.darkMode !== undefined) {
+        localStatePayload.darkMode = parsed.darkMode;
+      }
+      if (parsed.selectedTab) {
+        localStatePayload.selectedTab = parsed.selectedTab;
+      }
+
+      // Cập nhật trạng thái Offline cực kì mượt mà ngay tắp lự
+      useTournamentStore.setState(localStatePayload);
+
+      // 4. Thực hiện ghi đồng bộ tuần tự lên Supabase (tránh lỗi khóa ngoại triệt để)
       if (supabaseConnected) {
-        console.log('Đồng bộ sao lưu JSON trực tiếp lên Supabase bằng .upsert()...');
+        console.log('[Import JSON] Đang tiến hành dọn dẹp Supabase theo trình tự ngược để đón dòng dữ liệu mới...');
 
-        // ===================================================
-        // THÌ 1: PRUNING PHASE (REVERSE DEPENDENCY ORDER)
-        // ===================================================
-
-        // A. Dọn dẹp Matches trước vì trỏ FK tới Teams, Groups, Events
-        const incomingMatchIds = matchesToUpsert.map(m => m.id);
+        // Trình tự dọn dẹp ngược: Matches -> Teams -> Groups -> Events
+        const incomingMatchIds = uniqueMatchesToUpsert.map(m => m.id);
         try {
           if (incomingMatchIds.length > 0) {
             const { error: mDelErr } = await supabase.from('matches').delete().not('id', 'in', `(${incomingMatchIds.map(id => `'${id}'`).join(',')})`);
             if (mDelErr) {
-              console.error("Lỗi tại bước dọn dẹp MATCHES khi Import JSON:", mDelErr.message, mDelErr.details);
+              console.error("Lỗi tại bước dọn dẹp MATCHES khi Import JSON:", mDelErr.message);
             }
           } else {
-            const { error: mClearErr } = await supabase.from('matches').delete();
-            if (mClearErr) {
-              console.error("Lỗi tại bước xóa sạch MATCHES khi Import JSON:", mClearErr.message);
-            }
+            await supabase.from('matches').delete();
           }
-        } catch (exc: any) {
+        } catch (exc) {
           console.error("Ngoại lệ dọn dẹp MATCHES khi Import JSON:", exc);
         }
 
-        // B. Dọn dẹp Teams vì trỏ FK tới Groups và Events
-        const incomingTeamIds = teamsToUpsert.map(t => t.id);
+        const incomingTeamIds = uniqueTeamsToUpsert.map(t => t.id);
         try {
           if (incomingTeamIds.length > 0) {
             const { error: tDelErr } = await supabase.from('teams').delete().not('id', 'in', `(${incomingTeamIds.map(id => `'${id}'`).join(',')})`);
             if (tDelErr) {
-              console.error("Lỗi tại bước dọn dẹp TEAMS khi Import JSON:", tDelErr.message, tDelErr.details);
+              console.error("Lỗi tại bước dọn dẹp TEAMS khi Import JSON:", tDelErr.message);
             }
           } else {
-            const { error: tClearErr } = await supabase.from('teams').delete();
-            if (tClearErr) {
-              console.error("Lỗi tại bước xóa sạch TEAMS khi Import JSON:", tClearErr.message);
-            }
+            await supabase.from('teams').delete();
           }
-        } catch (exc: any) {
+        } catch (exc) {
           console.error("Ngoại lệ dọn dẹp TEAMS khi Import JSON:", exc);
         }
 
-        // C. Dọn dẹp Groups vì trỏ FK tới Events
-        const incomingGroupIds = groupsToUpsert.map(g => g.id);
+        const incomingGroupIds = uniqueGroupsToUpsert.map(g => g.id);
         try {
           if (incomingGroupIds.length > 0) {
             const { error: gDelErr } = await supabase.from('groups').delete().not('id', 'in', `(${incomingGroupIds.map(id => `'${id}'`).join(',')})`);
             if (gDelErr) {
-              console.error("Lỗi tại bước dọn dẹp GROUPS khi Import JSON:", gDelErr.message, gDelErr.details);
+              console.error("Lỗi tại bước dọn dẹp GROUPS khi Import JSON:", gDelErr.message);
             }
           } else {
-            const { error: gClearErr } = await supabase.from('groups').delete();
-            if (gClearErr) {
-              console.error("Lỗi tại bước xóa sạch GROUPS khi Import JSON:", gClearErr.message);
-            }
+            await supabase.from('groups').delete();
           }
-        } catch (exc: any) {
+        } catch (exc) {
           console.error("Ngoại lệ dọn dẹp GROUPS khi Import JSON:", exc);
         }
 
-        // D. Dọn dẹp Events
-        const incomingEventIds = eventsToUpsert.map(e => e.id);
+        const incomingEventIds = uniqueEventsToUpsert.map(e => e.id);
         try {
           if (incomingEventIds.length > 0) {
             const { error: eDelErr } = await supabase.from('events').delete().not('id', 'in', `(${incomingEventIds.map(id => `'${id}'`).join(',')})`);
             if (eDelErr) {
-              console.error("Lỗi tại bước dọn dẹp EVENTS khi Import JSON:", eDelErr.message, eDelErr.details);
+              console.error("Lỗi tại bước dọn dẹp EVENTS khi Import JSON:", eDelErr.message);
             }
           } else {
-            const { error: eClearErr } = await supabase.from('events').delete();
-            if (eClearErr) {
-              console.error("Lỗi tại bước xóa sạch EVENTS khi Import JSON:", eClearErr.message);
-            }
+            await supabase.from('events').delete();
           }
-        } catch (exc: any) {
+        } catch (exc) {
           console.error("Ngoại lệ dọn dẹp EVENTS khi Import JSON:", exc);
         }
 
-        // ===================================================
-        // THÌ 2: UPSERT/INSERT PHASE (FORWARD ORDER)
-        // ===================================================
+        console.log('[Import JSON] Đang tải tuần tự dữ liệu mới lên Supabase...');
 
-        // Bước 1: Ghi dữ liệu vào bảng `tournament`
+        // Trình tự ghi xuôi: Tournament -> Events -> Groups -> Teams -> Matches
+        // Bước 1: Ghi Tournament
         try {
           const { error: tErr } = await supabase.from('tournament').upsert({
             id: parsed.tournament.id || 't-1',
@@ -476,60 +613,60 @@ export default function Dashboard() {
             location: parsed.tournament.location,
             date: parsed.tournament.date,
             settings: parsed.tournament.settings,
-            current_event_id: parsed.currentEventId || 'event-default'
+            current_event_id: targetEventId
           });
           if (tErr) {
             console.error("Lỗi tại bước 1 (tournament) khi Import JSON:", tErr.message, tErr.details);
           }
-        } catch (exc: any) {
+        } catch (exc) {
           console.error("Ngoại lệ Bước 1 (tournament) khi Import JSON:", exc);
         }
 
-        // Bước 2: Ghi dữ liệu vào bảng `events` (sau khi đã có tournament)
+        // Bước 2: Ghi Events
         try {
-          if (eventsToUpsert.length > 0) {
-            const { error: eErr } = await supabase.from('events').upsert(eventsToUpsert);
+          if (uniqueEventsToUpsert.length > 0) {
+            const { error: eErr } = await supabase.from('events').upsert(uniqueEventsToUpsert);
             if (eErr) {
               console.error("Lỗi tại bước 2 (events) khi Import JSON:", eErr.message, eErr.details);
             }
           }
-        } catch (exc: any) {
+        } catch (exc) {
           console.error("Ngoại lệ Bước 2 (events) khi Import JSON:", exc);
         }
 
-        // Bước 3: Ghi dữ liệu vào bảng `groups` (sau khi đã có events)
+        // Bước 3: Ghi Groups
         try {
-          if (groupsToUpsert.length > 0) {
-            const { error: gErr } = await supabase.from('groups').upsert(groupsToUpsert);
+          if (uniqueGroupsToUpsert.length > 0) {
+            const { error: gErr } = await supabase.from('groups').upsert(uniqueGroupsToUpsert);
             if (gErr) {
               console.error("Lỗi tại bước 3 (groups) khi Import JSON:", gErr.message, gErr.details);
             }
           }
-        } catch (exc: any) {
+        } catch (exc) {
           console.error("Ngoại lệ Bước 3 (groups) khi Import JSON:", exc);
         }
 
-        // Bước 4: Ghi dữ liệu vào bảng `teams` (sau khi đã có groups và events)
+        // Bước 4: Ghi Teams
         try {
-          if (teamsToUpsert.length > 0) {
-            const { error: tmErr } = await supabase.from('teams').upsert(teamsToUpsert);
+          if (uniqueTeamsToUpsert.length > 0) {
+            const { error: tmErr } = await supabase.from('teams').upsert(uniqueTeamsToUpsert);
             if (tmErr) {
               console.error("Lỗi tại bước 4 (teams) khi Import JSON:", tmErr.message, tmErr.details);
             }
           }
-        } catch (exc: any) {
+        } catch (exc) {
           console.error("Ngoại lệ Bước 4 (teams) khi Import JSON:", exc);
         }
 
-        // Bước 5: Ghi dữ liệu vào bảng `matches` (sau khi đã có đầy đủ teams, groups, events)
+        // Bước 5: Ghi Matches
         try {
-          if (matchesToUpsert.length > 0) {
-            const { error: mErr } = await supabase.from('matches').upsert(matchesToUpsert);
+          if (uniqueMatchesToUpsert.length > 0) {
+            const { error: mErr } = await supabase.from('matches').upsert(uniqueMatchesToUpsert);
             if (mErr) {
               console.error("Lỗi tại bước 5 (matches) khi Import JSON:", mErr.message, mErr.details);
             }
           }
-        } catch (exc: any) {
+        } catch (exc) {
           console.error("Ngoại lệ Bước 5 (matches) khi Import JSON:", exc);
         }
       }

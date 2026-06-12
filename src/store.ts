@@ -151,7 +151,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               team_a_id: m.teamAId || null,
               team_b_id: m.teamBId || null,
               score_a: m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : null,
-              score_b: m.scoreB !== undefined && m.score_b !== null ? m.score_b : null,
+              score_b: m.scoreB !== undefined && m.scoreB !== null ? m.scoreB : null,
               winner_id: m.winnerId || null,
               status: m.status || 'pending',
               round: m.round,
@@ -165,6 +165,21 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
         }
       }
     });
+
+    // Hàm phụ trợ khử trùng lặp (unique by ID) để triệt tiêu vĩnh viễn lỗi ON CONFLICT DO UPDATE command cannot affect row a second time
+    const uniqueById = <T extends { id: string }>(arr: T[]): T[] => {
+      const map = new Map<string, T>();
+      arr.forEach(item => {
+        if (item && item.id) {
+          map.set(item.id, item);
+        }
+      });
+      return Array.from(map.values());
+    };
+
+    const uniqueGroups = uniqueById(allGroups);
+    const uniqueTeams = uniqueById(allTeams);
+    const uniqueMatches = uniqueById(allMatches);
 
     console.log(`[Supabase Sync] Bắt đầu đồng bộ trực tuyến. Đang dọn dẹp theo trình tự ngược...`);
 
@@ -299,8 +314,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
 
     // Bước 3: Ghi dữ liệu vào bảng `groups` (sau khi đã có events)
     try {
-      if (allGroups.length > 0) {
-        const { error: gErr } = await supabase.from('groups').upsert(allGroups);
+      if (uniqueGroups.length > 0) {
+        const { error: gErr } = await supabase.from('groups').upsert(uniqueGroups);
         if (gErr) {
           console.error("Lỗi tại bước 3 (groups):", gErr.message, gErr.details);
           errors.push(`Bảng đấu: ${gErr.message}`);
@@ -312,8 +327,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
 
     // Bước 4: Ghi dữ liệu vào bảng `teams` (sau khi đã có groups và events)
     try {
-      if (allTeams.length > 0) {
-        const { error: tmErr } = await supabase.from('teams').upsert(allTeams);
+      if (uniqueTeams.length > 0) {
+        const { error: tmErr } = await supabase.from('teams').upsert(uniqueTeams);
         if (tmErr) {
           console.error("Lỗi tại bước 4 (teams):", tmErr.message, tmErr.details);
           errors.push(`Đội: ${tmErr.message}`);
@@ -325,8 +340,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
 
     // Bước 5: Ghi dữ liệu vào bảng `matches` (sau khi đã có đầy đủ teams, groups, events)
     try {
-      if (allMatches.length > 0) {
-        const { error: mErr } = await supabase.from('matches').upsert(allMatches);
+      if (uniqueMatches.length > 0) {
+        const { error: mErr } = await supabase.from('matches').upsert(uniqueMatches);
         if (mErr) {
           console.error("Lỗi tại bước 5 (matches):", mErr.message, mErr.details);
           errors.push(`Trận đấu: ${mErr.message}`);
@@ -814,8 +829,9 @@ export const useTournamentStore = create<AppState>()(
             });
 
             // Tạo các bảng mới tinh
+            const activeEventId = state.currentEventId || 'event-default';
             for (let i = 0; i < numGroups; i++) {
-              const gId = `group-${i + 1}`;
+              const gId = `group-${i + 1}-${activeEventId}`;
               const gName = `Bảng ${String.fromCharCode(65 + i)}`; // Bảng A, B, C...
               nextGroups[gId] = {
                 id: gId,
@@ -887,8 +903,14 @@ export const useTournamentStore = create<AppState>()(
           set((state) => {
             const nextGroups: Record<string, Group> = {};
             const nextTeams = { ...state.teams };
+            const activeEventId = state.currentEventId || 'event-default';
 
-            groupList.forEach((g) => {
+            const updatedGroupList = groupList.map((g) => ({
+              ...g,
+              id: `${g.id}-${activeEventId}`
+            }));
+
+            updatedGroupList.forEach((g) => {
               nextGroups[g.id] = g;
               g.teamIds.forEach((tId) => {
                 if (nextTeams[tId]) {
@@ -904,7 +926,7 @@ export const useTournamentStore = create<AppState>()(
               groups: nextGroups,
               teams: nextTeams,
               matches: nextMatches,
-              activeGroupId: groupList[0].id,
+              activeGroupId: updatedGroupList[0]?.id || null,
             };
           });
 

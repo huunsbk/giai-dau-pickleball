@@ -9,7 +9,7 @@ import { Trash2, Edit2, Plus, Upload, FileType, Check, AlertCircle, Sparkles, He
 import { SeedType } from '../types';
 
 export default function TeamManager() {
-  const { teams, addTeam, deleteTeam, updateTeam, importTeams, addLog, isAdmin } = useTournamentStore();
+  const { teams, groups, addTeam, deleteTeam, updateTeam, importTeams, addLog, isAdmin } = useTournamentStore();
   const [newTeamName, setNewTeamName] = useState('');
   const [newSeed, setNewSeed] = useState<SeedType>('none');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -400,7 +400,7 @@ export default function TeamManager() {
                           <td className="py-2 px-4">
                             {team.groupId ? (
                               <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-blue-50 dark:bg-blue-955/40 text-blue-700 dark:text-blue-300 border border-blue-200/50">
-                                Đã xếp Bảng {team.groupId.replace('group-', '').toUpperCase()}
+                                Đã xếp {groups[team.groupId]?.name || `Bảng ${team.groupId.replace('group-', '').split('-')[0].toUpperCase()}`}
                               </span>
                             ) : (
                               <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-zinc-100 text-zinc-400 dark:bg-zinc-805 dark:text-zinc-500 border border-transparent">
