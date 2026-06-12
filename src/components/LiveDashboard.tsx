@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import ExcelJS from 'exceljs';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTournamentStore } from '../store';
 import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime } from '../utils/tournamentEngine';
 import { 
@@ -17,10 +16,75 @@ import {
   Trophy, 
   Layers, 
   GitCommit, 
-  Grid,
-  FileSpreadsheet,
-  Printer
+  Grid
 } from 'lucide-react';
+
+interface AutoScrollListProps {
+  children: React.ReactNode;
+  className?: string;
+  maxHeight?: string;
+}
+
+function AutoScrollList({ children, className = '', maxHeight = '350px' }: AutoScrollListProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+
+    let timer: any;
+    let scrollDirection = 1; // 1 for down, -1 for up
+    let pauseCounter = 0;
+
+    const scroll = () => {
+      if (!element) return;
+      const { scrollTop, scrollHeight, clientHeight } = element;
+      const maxScroll = scrollHeight - clientHeight;
+
+      if (maxScroll <= 2) {
+        element.scrollTop = 0;
+        timer = setTimeout(scroll, 1000);
+        return;
+      }
+
+      if (pauseCounter > 0) {
+        pauseCounter--;
+        timer = setTimeout(scroll, 35);
+        return;
+      }
+
+      let nextScroll = scrollTop + scrollDirection * 0.7; // Slow and gentle scroll
+
+      if (nextScroll >= maxScroll) {
+        nextScroll = maxScroll;
+        scrollDirection = -1;
+        pauseCounter = 60; // Pause for ~2 seconds at bottom
+      } else if (nextScroll <= 0) {
+        nextScroll = 0;
+        scrollDirection = 1;
+        pauseCounter = 60; // Pause for ~2 seconds at top
+      }
+
+      element.scrollTop = nextScroll;
+      timer = setTimeout(scroll, 35);
+    };
+
+    pauseCounter = 60; // Initial delay
+    timer = setTimeout(scroll, 1500);
+
+    return () => clearTimeout(timer);
+  }, [children]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={`overflow-y-auto pr-1 ${className}`}
+      style={{ maxHeight, scrollBehavior: 'auto' }}
+    >
+      {children}
+    </div>
+  );
+}
 
 export default function LiveDashboard() {
   const {
@@ -399,82 +463,54 @@ export default function LiveDashboard() {
       }`}
       id="live-root-container"
     >
-      {/* Khung điều khiển Live Projector */}
-      <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-4 print:hidden">
-        <div>
-          <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-            <Monitor size={18} className="text-blue-500 animate-pulse" />
-            Live Dashboard (Chế độ Trình diễn TV Sân thi đấu)
-          </h3>
-          <p className="text-xs text-zinc-400">Trình chiếu sơ đồ thi đấu, điểm số trực tiếp của tất cả các nội dung cho khan giả tại sân.</p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Lọc nội dung */}
-          <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-950 p-1 rounded-xl border border-zinc-200/60 dark:border-zinc-850">
+      {/* Thanh điều khiển siêu tối giản, không viền, không hộp (xóa bỏ phần khung cồng kềnh) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-transparent py-1 print:hidden" id="live-minimal-controls-bar">
+        {/* Lọc nội dung siêu gọn */}
+        <div className="flex items-center gap-1 bg-zinc-250/50 dark:bg-zinc-900/60 p-1 rounded-xl border border-zinc-300/20 dark:border-zinc-800">
+          <button
+            onClick={() => setSelectedEventFilter('all')}
+            className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all cursor-pointer select-none ${
+              selectedEventFilter === 'all'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-zinc-650 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-amber-200'
+            }`}
+          >
+            Tất cả nội dung
+          </button>
+          {eventList.map((evt) => (
             <button
-              onClick={() => setSelectedEventFilter('all')}
-              className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
-                selectedEventFilter === 'all'
+              key={evt.id}
+              onClick={() => {
+                setSelectedEventFilter(evt.id);
+                setActiveCycleTab('standings');
+              }}
+              className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all cursor-pointer select-none ${
+                selectedEventFilter === evt.id
                   ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-205'
+                  : 'text-zinc-650 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-amber-200'
               }`}
             >
-              Tất cả nội dung
+              {evt.name}
             </button>
-            {eventList.map((evt) => (
-              <button
-                key={evt.id}
-                onClick={() => {
-                  setSelectedEventFilter(evt.id);
-                  setActiveCycleTab('standings');
-                }}
-                className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
-                  selectedEventFilter === evt.id
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-205'
-                }`}
-              >
-                {evt.name}
-              </button>
-            ))}
-          </div>
+          ))}
+        </div>
 
+        <div className="flex items-center gap-2">
           {selectedEventFilter !== 'all' && (
             <button
               onClick={() => setIsPlaying(!isPlaying)}
-              className="p-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-850 dark:text-zinc-100 rounded-xl cursor-pointer"
+              className="p-2 text-zinc-650 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 bg-zinc-250/50 dark:bg-zinc-900/60 rounded-xl cursor-pointer transition-colors"
               title={isPlaying ? 'Dừng tự xoay vòng' : 'Chạy tự xoay vòng'}
             >
-              {isPlaying ? <Pause size={15} /> : <Play size={15} />}
+              {isPlaying ? <Pause size={14} /> : <Play size={14} />}
             </button>
           )}
 
           <button
-            onClick={handleExportLiveExcel}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 hover:scale-[1.01] active:scale-95 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all uppercase tracking-wider"
-            id="btn-export-live-excel"
-            title="Xuất Excel Lịch đấu & Điểm số"
-          >
-            <FileSpreadsheet size={14} />
-            <span>Xuất Excel TV</span>
-          </button>
-
-          <button
-            onClick={() => window.print()}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 hover:scale-[1.01] active:scale-95 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all uppercase tracking-wider"
-            id="btn-print-live-pdf"
-            title="In hoặc lưu PDF lịch đấu & kết quả"
-          >
-            <Printer size={14} />
-            <span>In / PDF TV</span>
-          </button>
-
-          <button
             onClick={handleToggleFullscreen}
-            className="px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 font-bold rounded-xl text-xs cursor-pointer flex items-center gap-1.5"
+            className="px-4 py-2 bg-zinc-950 text-white dark:bg-zinc-100 dark:text-zinc-950 hover:opacity-90 font-black rounded-xl text-xs cursor-pointer flex items-center gap-1.5 transition-all shadow-sm"
           >
-            <Maximize size={14} /> {isFullscreen ? 'Thoát Đầy Màn Hình' : 'Mở Đầy Màn Hình'}
+            <Maximize size={13} /> {isFullscreen ? 'Thoát TV' : 'Mở Đầy Màn Hình'}
           </button>
         </div>
       </div>
@@ -541,7 +577,7 @@ export default function LiveDashboard() {
                     {evtGroups.length === 0 ? (
                       <p className="text-[11px] text-zinc-400 py-6 text-center">Chưa chia bảng đấu.</p>
                     ) : (
-                      <div className="space-y-4 max-h-[350px] overflow-y-auto">
+                      <AutoScrollList maxHeight="350px" className="space-y-4">
                         {evtGroups.map((group) => {
                           const std = stdByGrp[group.id] || [];
                           return (
@@ -563,7 +599,7 @@ export default function LiveDashboard() {
                             </div>
                           );
                         })}
-                      </div>
+                      </AutoScrollList>
                     )}
                   </div>
 
@@ -573,7 +609,7 @@ export default function LiveDashboard() {
                       <Clock size={13} /> Lịch đấu & Điểm số mới nhất
                     </span>
                     
-                    <div className="space-y-1.5 max-h-[350px] overflow-y-auto">
+                    <AutoScrollList maxHeight="350px" className="space-y-1.5 pb-2">
                       {pendingMatches.length === 0 && finishedMatches.length === 0 ? (
                         <p className="text-[11px] text-zinc-400 py-6 text-center">Chưa có lịch thi đấu.</p>
                       ) : (
@@ -587,7 +623,7 @@ export default function LiveDashboard() {
                                 return (
                                   <div key={m.id} className="flex justify-between items-center bg-white dark:bg-zinc-950 py-1 px-3 rounded-lg border border-zinc-100 dark:border-zinc-850 text-[11px]">
                                     <span className="font-semibold text-zinc-700 dark:text-zinc-300 truncate max-w-[80%]" style={{ fontSize: '14px', color: '#010104' }}>{teamA} vs {teamB}</span>
-                                    <span className="text-[9px] font-bold text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-1 py-0.5 rounded leading-none shrink-0 border border-zinc-200/50 dark:border-zinc-805">CHỜ</span>
+                                    <span className="text-[9px] font-bold text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-1 py-0.5 rounded leading-none shrink-0 border border-zinc-200/50 dark:border-zinc-850">CHỜ</span>
                                   </div>
                                 );
                               })}
@@ -611,7 +647,7 @@ export default function LiveDashboard() {
                           )}
                         </>
                       )}
-                    </div>
+                    </AutoScrollList>
                   </div>
 
                   {/* Cột 3: Sơ đồ Knockout */}
@@ -623,7 +659,7 @@ export default function LiveDashboard() {
                     {koMatches.length === 0 ? (
                       <p className="text-[11px] text-zinc-400 py-6 text-center">Chưa lập sơ đồ Knockout.</p>
                     ) : (
-                      <div className="space-y-1.5 max-h-[350px] overflow-y-auto">
+                      <AutoScrollList maxHeight="350px" className="space-y-1.5 pb-2">
                         {Array.from(new Set(koMatches.map((m) => m.round))).sort((a,b)=>a-b).map((round) => {
                           const roundMatches = koMatches.filter((m) => m.round === round);
                           const roundName = roundMatches[0]?.knockoutRoundName || 'Vòng';
@@ -654,7 +690,7 @@ export default function LiveDashboard() {
                             </div>
                           );
                         })}
-                      </div>
+                      </AutoScrollList>
                     )}
                   </div>
 
@@ -755,7 +791,7 @@ export default function LiveDashboard() {
                             Hoàn tất toàn bộ lịch vòng bảng này!
                           </div>
                         ) : (
-                          <div className="space-y-1 max-h-[550px] overflow-y-auto pr-1">
+                          <AutoScrollList maxHeight="400px" className="space-y-1 pr-1">
                             {pendingMatches.map((m) => {
                               const teamAName = currentEvt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
                               const teamBName = currentEvt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
@@ -775,7 +811,7 @@ export default function LiveDashboard() {
                                 </div>
                               );
                             })}
-                          </div>
+                          </AutoScrollList>
                         )}
                       </div>
 
@@ -790,7 +826,7 @@ export default function LiveDashboard() {
                             Chưa có trận nào hoàn tất ghi nhận tỉ số.
                           </div>
                         ) : (
-                          <div className="space-y-1 max-h-[550px] overflow-y-auto pr-1">
+                          <AutoScrollList maxHeight="400px" className="space-y-1 pr-1">
                             {finishedMatches.map((m) => {
                               const teamAName = currentEvt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
                               const teamBName = currentEvt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
@@ -812,7 +848,7 @@ export default function LiveDashboard() {
                                 </div>
                               );
                             })}
-                          </div>
+                          </AutoScrollList>
                         )}
                       </div>
                     </div>

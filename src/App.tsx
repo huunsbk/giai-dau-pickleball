@@ -16,6 +16,7 @@ import KnockoutBracket from './components/KnockoutBracket';
 import LiveDashboard from './components/LiveDashboard';
 import AuditLogger from './components/AuditLogger';
 import EventBar from './components/EventBar';
+import ExportManager from './components/ExportManager';
 
 import {
   Trophy,
@@ -28,7 +29,8 @@ import {
   ClipboardList,
   Sun,
   Moon,
-  Zap
+  Zap,
+  FileDown
 } from 'lucide-react';
 
 export default function App() {
@@ -93,6 +95,7 @@ export default function App() {
     { id: 'standings', label: 'Tuyển chọn vòng trong', icon: FileSpreadsheet },
     { id: 'knockout', label: 'Sơ đồ trực tiếp', icon: Network },
     { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv },
+    { id: 'export', label: 'Xuất file', icon: FileDown },
     { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList },
   ];
 
@@ -231,7 +234,7 @@ export default function App() {
 
           {/* Outer Wrapper cho màn hình chính - Mở rộng toàn bộ chiều rộng (Full Width) */}
           <main className="flex-1 p-4 lg:p-6 w-full print:p-0 print:w-full" id="main-content-panel">
-            {selectedTab !== 'live' && selectedTab !== 'logs' && <EventBar />}
+            {selectedTab !== 'live' && selectedTab !== 'logs' && selectedTab !== 'export' && <EventBar />}
             
             <div className="animate-fade-in">
               {selectedTab === 'dashboard' && <Dashboard />}
@@ -241,6 +244,7 @@ export default function App() {
               {selectedTab === 'standings' && <Standings />}
               {selectedTab === 'knockout' && <KnockoutBracket />}
               {selectedTab === 'live' && <LiveDashboard />}
+              {selectedTab === 'export' && <ExportManager />}
               {selectedTab === 'logs' && <AuditLogger />}
             </div>
           </main>
