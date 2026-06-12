@@ -1208,21 +1208,38 @@ export const useTournamentStore = create<AppState>()(
             // Xem gLabel có tương ứng với bảng nào không (vd "Bảng A" -> group-1)
             const matchedGroup = Object.values(groupsMap).find(g => g.name.toLowerCase() === gLabel.toLowerCase());
             if (matchedGroup) {
-              const standing = standingsByGroup[matchedGroup.id];
-              if (standing && standing.find(s => s.rank === rank)) {
-                const teamId = standing.find(s => s.rank === rank)!.teamId;
-                return tIdToNameOrId(teamId, teamsMap);
+              // Kiểm tra xem vòng bảng của bảng này đã thi đấu xong chưa
+              const groupMatches = matches.filter((m) => m.groupId === matchedGroup.id);
+              const isGroupFinished = groupMatches.length > 0 && groupMatches.every(m => m.status === 'finished');
+              
+              if (isGroupFinished) {
+                const standing = standingsByGroup[matchedGroup.id];
+                const foundItem = standing ? standing.find(s => s.rank === rank) : null;
+                if (foundItem) {
+                  return tIdToNameOrId(foundItem.teamId, teamsMap);
+                }
               }
+
+              // Nếu chưa thi đấu xong hoặc không tìm thấy đội, hiển thị Nhất/Nhì/Ba [Tên Bảng] theo đúng yêu cầu
+              const rankWords: Record<number, string> = { 1: 'Nhất', 2: 'Nhì', 3: 'Ba' };
+              const prefix = rankWords[rank] || `Hạng ${rank}`;
+              return `${prefix} ${matchedGroup.name}`;
             }
             return backupName;
           };
 
           const getThirdPlaceOrPlaceholder = (rank: number, backupName: string): string => {
-            const cand = bestThirds.find(c => c.rank === rank);
-            if (cand) {
-              return teamsMap[cand.teamId]?.name || cand.teamName;
+            const groupMatches = matches.filter((m) => m.groupId !== 'knockout');
+            const allGroupMatchesFinished = groupMatches.length > 0 && groupMatches.every(m => m.status === 'finished');
+            
+            if (allGroupMatchesFinished) {
+              const cand = bestThirds.find(c => c.rank === rank);
+              if (cand) {
+                return teamsMap[cand.teamId]?.name || cand.teamName;
+              }
             }
-            return backupName;
+            // Hiển thị "Ba Xuất Sắc" nếu chưa có kết quả vòng bảng
+            return `Ba ${rank <= 2 ? 'bảng' : ''} xuất sắc ${rank}`;
           };
 
           const slotsData: string[] = [];
@@ -1283,24 +1300,37 @@ export const useTournamentStore = create<AppState>()(
               });
 
             } else if (size === 32) {
-              // 32 ĐỘI
+              // 32 ĐỘI - Khởi tạo sơ đồ nhánh mặc định chính xác tuyệt đối như hình vẽ
               const groupsList = Object.values(groupsMap);
+              
+              // Sơ đồ chuẩn ghép cặp của 16 bảng (1 vs 9, 2 vs 10...)
+              const pairConfig = [
+                [1, 9], [2, 10], [3, 11], [4, 12], [5, 13], [6, 14], [7, 15], [8, 16],
+                [9, 1], [10, 2], [11, 3], [12, 4], [13, 5], [14, 6], [15, 7], [16, 8]
+              ];
+
               for (let i = 0; i < 16; i++) {
-                const gIndexA = i % (groupsList.length || 1);
-                const gIndexB = (i + 1) % (groupsList.length || 1);
-                const gA = groupsList[gIndexA];
-                const gB = groupsList[gIndexB];
+                const pair = pairConfig[i];
+                const idxA = (pair[0] - 1) % (groupsList.length || 1);
+                const idxB = (pair[1] - 1) % (groupsList.length || 1);
+
+                const gA = groupsList[idxA];
+                const gB = groupsList[idxB];
+
+                // Backup name nếu chưa tạo bảng
+                const defaultNameA = `Nhất Bảng ${pair[0]}`;
+                const defaultNameB = `Nhì Bảng ${pair[1]}`;
 
                 const placeholderA = gA
-                  ? getRealTeamOrPlaceholder(gA.name, Math.floor(i / (groupsList.length || 1)) + 1, `Hạng ${Math.floor(i / (groupsList.length || 1)) + 1} ${gA.name}`)
-                  : `Hạt giống ${i * 2 + 1}`;
+                  ? getRealTeamOrPlaceholder(gA.name, 1, `Nhất Bảng ${pair[0]}`)
+                  : defaultNameA;
 
                 const placeholderB = gB
-                  ? getRealTeamOrPlaceholder(gB.name, Math.floor((i + 1) / (groupsList.length || 1)) + 1, `Hạng ${Math.floor((i + 1) / (groupsList.length || 1)) + 1} ${gB.name}`)
-                  : `Hạt giống ${i * 2 + 2}`;
+                  ? getRealTeamOrPlaceholder(gB.name, 2, `Nhì Bảng ${pair[1]}`)
+                  : defaultNameB;
 
                 advList.push(
-                  { label: `Trận ${i + 1}-A`, placeholder: placeholderA },
+                  { label: `Trân ${i + 1}-A`, placeholder: placeholderA },
                   { label: `Trận ${i + 1}-B`, placeholder: placeholderB }
                 );
               }
