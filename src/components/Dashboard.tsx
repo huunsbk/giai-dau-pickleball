@@ -850,26 +850,6 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {supabaseSyncError && (
-        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 text-red-800 dark:text-red-300 text-xs font-semibold flex flex-col gap-2 shadow-xs" id="supabase-sync-error-banner">
-          <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-bold uppercase tracking-wider">
-            <span>⚠️ PHÁT HIỆN LỖI ĐỒNG BỘ DỮ LIỆU LÊN SUPABASE</span>
-          </div>
-          <p className="leading-relaxed">
-            Hệ thống không thể lưu cập nhật mới nhất của bạn lên một số bảng do lỗi cơ sở dữ liệu: <code className="px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/50 text-red-900 dark:text-red-100 font-mono text-[11px] block mt-1.5 p-2 overflow-x-auto whitespace-pre-wrap">{supabaseSyncError}</code>
-          </p>
-          <div className="mt-1 p-2.5 rounded bg-amber-50 dark:bg-amber-950/20 border border-amber-200/30 text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed font-sans">
-            <span className="font-bold uppercase block mb-1">💡 Hướng dẫn khắc phục nhanh lỗi ràng buộc (Constraint Violations):</span>
-            Nếu thông báo phát hiện vi phạm ràng buộc <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">"violates not-null constraint"</code> đối với cột <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">"group_id"</code>, <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">"team_a_id"</code> hoặc <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">"team_b_id"</code> ở bảng <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">"matches"</code>, quý khách hãy chạy lệnh sau trong mục <strong>SQL Editor</strong> trên bảng điều khiển Supabase của mình để loại bỏ ràng buộc NOT NULL này:
-            <pre className="mt-2 p-2 rounded bg-zinc-900 text-emerald-400 font-mono text-[10px] overflow-x-auto select-all leading-normal whitespace-pre-wrap">
-{`ALTER TABLE matches ALTER COLUMN group_id DROP NOT NULL;
-ALTER TABLE matches ALTER COLUMN team_a_id DROP NOT NULL;
-ALTER TABLE matches ALTER COLUMN team_b_id DROP NOT NULL;`}
-            </pre>
-          </div>
-        </div>
-      )}
-
       {/* GRID THỐNG KÊ LỚN (Chữ to, dễ nhìn, đường biên dày dặn) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         
