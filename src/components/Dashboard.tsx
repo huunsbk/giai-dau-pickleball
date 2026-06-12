@@ -315,10 +315,15 @@ export default function Dashboard() {
             const tList = getTeamsArray(evt.teams);
             tList.forEach((t: any) => {
               if (t && t.id) {
+                let finalGroupId = t.groupId !== undefined ? t.groupId : (t.group_id || null);
+                if (finalGroupId && finalGroupId !== 'knockout' && !finalGroupId.endsWith(`-${evtId}`)) {
+                  finalGroupId = `${finalGroupId}-${evtId}`;
+                }
+
                 const normTeam = {
                   id: t.id,
                   name: t.name,
-                  groupId: t.groupId !== undefined ? t.groupId : (t.group_id || null),
+                  groupId: finalGroupId,
                   seed: t.seed || 'none',
                 };
                 normalizedTeamsObj[t.id] = normTeam;
@@ -338,17 +343,22 @@ export default function Dashboard() {
             const gList = getGroupsArray(evt.groups);
             gList.forEach((g: any) => {
               if (g && g.id) {
-                normalizedGroupsObj[g.id] = {
-                  id: g.id,
+                let finalGroupId = g.id;
+                if (!finalGroupId.endsWith(`-${evtId}`)) {
+                  finalGroupId = `${finalGroupId}-${evtId}`;
+                }
+
+                normalizedGroupsObj[finalGroupId] = {
+                  id: finalGroupId,
                   name: g.name,
                   teamIds: Array.isArray(g.teamIds) ? g.teamIds : (Array.isArray(g.team_ids) ? g.team_ids : []),
                 };
 
                 // Thêm vào hàng đợi gửi Supabase
                 groupsToUpsert.push({
-                  id: g.id,
+                  id: finalGroupId,
                   name: g.name,
-                  team_ids: normalizedGroupsObj[g.id].teamIds,
+                  team_ids: normalizedGroupsObj[finalGroupId].teamIds,
                   event_id: evtId
                 });
               }
@@ -376,12 +386,18 @@ export default function Dashboard() {
               }
             });
 
+            // Tiêu chuẩn hóa activeGroupId cho event
+            let activeGroupId = evt.activeGroupId !== undefined ? evt.activeGroupId : (evt.active_group_id || null);
+            if (activeGroupId && activeGroupId !== 'knockout' && !activeGroupId.endsWith(`-${evtId}`)) {
+              activeGroupId = `${activeGroupId}-${evtId}`;
+            }
+
             // Đưa vào danh sách sự kiện cục bộ
             localEventsRecord[evtId] = {
               id: evt.id,
               name: evt.name,
               settings: evt.settings || parsed.tournament?.settings || {},
-              activeGroupId: evt.activeGroupId !== undefined ? evt.activeGroupId : (evt.active_group_id || null),
+              activeGroupId: activeGroupId,
               advanceSelectionMode: evt.advanceSelectionMode || 'auto',
               manualQualifiedTeamIds: evt.manualQualifiedTeamIds || [],
               teams: normalizedTeamsObj,
@@ -394,7 +410,7 @@ export default function Dashboard() {
               id: evt.id,
               name: evt.name,
               settings: evt.settings || parsed.tournament?.settings || {},
-              active_group_id: evt.activeGroupId !== undefined ? evt.activeGroupId : (evt.active_group_id || null),
+              active_group_id: activeGroupId,
               advance_selection_mode: evt.advanceSelectionMode || 'auto',
               manual_qualified_team_ids: evt.manualQualifiedTeamIds || []
             });
@@ -410,10 +426,15 @@ export default function Dashboard() {
         const tList = getTeamsArray(parsed.teams);
         tList.forEach((t: any) => {
           if (t && t.id) {
+            let finalGroupId = t.groupId !== undefined ? t.groupId : (t.group_id || null);
+            if (finalGroupId && finalGroupId !== 'knockout' && !finalGroupId.endsWith(`-${defEvtId}`)) {
+              finalGroupId = `${finalGroupId}-${defEvtId}`;
+            }
+
             const normTeam = {
               id: t.id,
               name: t.name,
-              groupId: t.groupId !== undefined ? t.groupId : (t.group_id || null),
+              groupId: finalGroupId,
               seed: t.seed || 'none'
             };
             normalizedTeamsObj[t.id] = normTeam;
@@ -431,16 +452,21 @@ export default function Dashboard() {
         const gList = getGroupsArray(parsed.groups);
         gList.forEach((g: any) => {
           if (g && g.id) {
-            normalizedGroupsObj[g.id] = {
-              id: g.id,
+            let finalGroupId = g.id;
+            if (!finalGroupId.endsWith(`-${defEvtId}`)) {
+              finalGroupId = `${finalGroupId}-${defEvtId}`;
+            }
+
+            normalizedGroupsObj[finalGroupId] = {
+              id: finalGroupId,
               name: g.name,
               teamIds: Array.isArray(g.teamIds) ? g.teamIds : (Array.isArray(g.team_ids) ? g.team_ids : [])
             };
 
             groupsToUpsert.push({
-              id: g.id,
+              id: finalGroupId,
               name: g.name,
-              team_ids: normalizedGroupsObj[g.id].teamIds,
+              team_ids: normalizedGroupsObj[finalGroupId].teamIds,
               event_id: defEvtId
             });
           }
@@ -467,12 +493,18 @@ export default function Dashboard() {
           }
         });
 
+        // Tiêu chuẩn hóa activeGroupId cho event mặc định
+        let activeGroupId = parsed.activeGroupId || null;
+        if (activeGroupId && activeGroupId !== 'knockout' && !activeGroupId.endsWith(`-${defEvtId}`)) {
+          activeGroupId = `${activeGroupId}-${defEvtId}`;
+        }
+
         // Tạo 1 event mặc định
         localEventsRecord[defEvtId] = {
           id: defEvtId,
           name: parsed.currentEventName || 'Đôi Nam Chuyên Nghiệp',
           settings: parsed.tournament?.settings || {},
-          activeGroupId: parsed.activeGroupId || null,
+          activeGroupId: activeGroupId,
           advanceSelectionMode: parsed.advanceSelectionMode || 'auto',
           manualQualifiedTeamIds: parsed.manualQualifiedTeamIds || [],
           teams: normalizedTeamsObj,
@@ -484,7 +516,7 @@ export default function Dashboard() {
           id: defEvtId,
           name: parsed.currentEventName || 'Đôi Nam Chuyên Nghiệp',
           settings: parsed.tournament?.settings || {},
-          active_group_id: parsed.activeGroupId || null,
+          active_group_id: activeGroupId,
           advance_selection_mode: parsed.advanceSelectionMode || 'auto',
           manual_qualified_team_ids: parsed.manualQualifiedTeamIds || []
         });
@@ -546,14 +578,23 @@ export default function Dashboard() {
 
         // Trình tự dọn dẹp ngược: Matches -> Teams -> Groups -> Events
         const incomingMatchIds = uniqueMatchesToUpsert.map(m => m.id);
+        const incomingEventIds = uniqueEventsToUpsert.map(e => e.id);
+        
         try {
           if (incomingMatchIds.length > 0) {
-            const { error: mDelErr } = await supabase.from('matches').delete().not('id', 'in', `(${incomingMatchIds.map(id => `'${id}'`).join(',')})`);
+            const { error: mDelErr } = incomingEventIds.length > 0
+              ? await supabase.from('matches').delete().in('event_id', incomingEventIds).not('id', 'in', `(${incomingMatchIds.map(id => `'${id}'`).join(',')})`)
+              : await supabase.from('matches').delete().not('id', 'in', `(${incomingMatchIds.map(id => `'${id}'`).join(',')})`);
             if (mDelErr) {
               console.error("Lỗi tại bước dọn dẹp MATCHES khi Import JSON:", mDelErr.message);
             }
           } else {
-            await supabase.from('matches').delete();
+            const query = supabase.from('matches').delete();
+            if (incomingEventIds.length > 0) {
+              await query.in('event_id', incomingEventIds);
+            } else {
+              await query.eq('id', 'dummy_safeguard');
+            }
           }
         } catch (exc) {
           console.error("Ngoại lệ dọn dẹp MATCHES khi Import JSON:", exc);
@@ -562,12 +603,19 @@ export default function Dashboard() {
         const incomingTeamIds = uniqueTeamsToUpsert.map(t => t.id);
         try {
           if (incomingTeamIds.length > 0) {
-            const { error: tDelErr } = await supabase.from('teams').delete().not('id', 'in', `(${incomingTeamIds.map(id => `'${id}'`).join(',')})`);
+            const { error: tDelErr } = incomingEventIds.length > 0
+              ? await supabase.from('teams').delete().in('event_id', incomingEventIds).not('id', 'in', `(${incomingTeamIds.map(id => `'${id}'`).join(',')})`)
+              : await supabase.from('teams').delete().not('id', 'in', `(${incomingTeamIds.map(id => `'${id}'`).join(',')})`);
             if (tDelErr) {
               console.error("Lỗi tại bước dọn dẹp TEAMS khi Import JSON:", tDelErr.message);
             }
           } else {
-            await supabase.from('teams').delete();
+            const query = supabase.from('teams').delete();
+            if (incomingEventIds.length > 0) {
+              await query.in('event_id', incomingEventIds);
+            } else {
+              await query.eq('id', 'dummy_safeguard');
+            }
           }
         } catch (exc) {
           console.error("Ngoại lệ dọn dẹp TEAMS khi Import JSON:", exc);
@@ -576,18 +624,24 @@ export default function Dashboard() {
         const incomingGroupIds = uniqueGroupsToUpsert.map(g => g.id);
         try {
           if (incomingGroupIds.length > 0) {
-            const { error: gDelErr } = await supabase.from('groups').delete().not('id', 'in', `(${incomingGroupIds.map(id => `'${id}'`).join(',')})`);
+            const { error: gDelErr } = incomingEventIds.length > 0
+              ? await supabase.from('groups').delete().in('event_id', incomingEventIds).not('id', 'in', `(${incomingGroupIds.map(id => `'${id}'`).join(',')})`)
+              : await supabase.from('groups').delete().not('id', 'in', `(${incomingGroupIds.map(id => `'${id}'`).join(',')})`);
             if (gDelErr) {
               console.error("Lỗi tại bước dọn dẹp GROUPS khi Import JSON:", gDelErr.message);
             }
           } else {
-            await supabase.from('groups').delete();
+            const query = supabase.from('groups').delete();
+            if (incomingEventIds.length > 0) {
+              await query.in('event_id', incomingEventIds);
+            } else {
+              await query.eq('id', 'dummy_safeguard');
+            }
           }
         } catch (exc) {
           console.error("Ngoại lệ dọn dẹp GROUPS khi Import JSON:", exc);
         }
 
-        const incomingEventIds = uniqueEventsToUpsert.map(e => e.id);
         try {
           if (incomingEventIds.length > 0) {
             const { error: eDelErr } = await supabase.from('events').delete().not('id', 'in', `(${incomingEventIds.map(id => `'${id}'`).join(',')})`);
@@ -595,7 +649,7 @@ export default function Dashboard() {
               console.error("Lỗi tại bước dọn dẹp EVENTS khi Import JSON:", eDelErr.message);
             }
           } else {
-            await supabase.from('events').delete();
+            await supabase.from('events').delete().eq('id', 'dummy_safeguard');
           }
         } catch (exc) {
           console.error("Ngoại lệ dọn dẹp EVENTS khi Import JSON:", exc);

@@ -190,13 +190,16 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
     // 1. Dọn dẹp Matches dư thừa trước vì nó trỏ FK tới Teams, Groups, và Events
     try {
       if (matchIdsInState.length > 0) {
-        const { error: mDelErr } = await supabase.from('matches').delete().not('id', 'in', `(${matchIdsInState.map(id => `'${id}'`).join(',')})`);
+        const { error: mDelErr } = eventIds.length > 0
+          ? await supabase.from('matches').delete().in('event_id', eventIds).not('id', 'in', `(${matchIdsInState.map(id => `'${id}'`).join(',')})`)
+          : await supabase.from('matches').delete().not('id', 'in', `(${matchIdsInState.map(id => `'${id}'`).join(',')})`);
         if (mDelErr) {
           console.error("Lỗi tại bước dọn dẹp MATCHES:", mDelErr.message);
           errors.push(`Dọn dẹp trận đấu: ${mDelErr.message}`);
         }
       } else {
-        const { error: mClearErr } = await supabase.from('matches').delete();
+        const query = supabase.from('matches').delete();
+        const { error: mClearErr } = eventIds.length > 0 ? await query.in('event_id', eventIds) : await query.eq('id', 'dummy_safeguard');
         if (mClearErr) {
           console.error("Lỗi tại bước xóa sạch MATCHES:", mClearErr.message);
           errors.push(`Xóa sạch trận đấu: ${mClearErr.message}`);
@@ -209,13 +212,16 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
     // 2. Dọn dẹp Teams dư thừa vì nó trỏ FK tới Groups và Events
     try {
       if (teamIdsInState.length > 0) {
-        const { error: tDelErr } = await supabase.from('teams').delete().not('id', 'in', `(${teamIdsInState.map(id => `'${id}'`).join(',')})`);
+        const { error: tDelErr } = eventIds.length > 0
+          ? await supabase.from('teams').delete().in('event_id', eventIds).not('id', 'in', `(${teamIdsInState.map(id => `'${id}'`).join(',')})`)
+          : await supabase.from('teams').delete().not('id', 'in', `(${teamIdsInState.map(id => `'${id}'`).join(',')})`);
         if (tDelErr) {
           console.error("Lỗi tại bước dọn dẹp TEAMS:", tDelErr.message);
           errors.push(`Dọn dẹp đội: ${tDelErr.message}`);
         }
       } else {
-        const { error: tClearErr } = await supabase.from('teams').delete();
+        const query = supabase.from('teams').delete();
+        const { error: tClearErr } = eventIds.length > 0 ? await query.in('event_id', eventIds) : await query.eq('id', 'dummy_safeguard');
         if (tClearErr) {
           console.error("Lỗi tại bước xóa sạch TEAMS:", tClearErr.message);
           errors.push(`Xóa sạch đội: ${tClearErr.message}`);
@@ -228,13 +234,16 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
     // 3. Dọn dẹp Groups dư thừa vì nó trỏ FK tới Events
     try {
       if (groupIdsInState.length > 0) {
-        const { error: gDelErr } = await supabase.from('groups').delete().not('id', 'in', `(${groupIdsInState.map(id => `'${id}'`).join(',')})`);
+        const { error: gDelErr } = eventIds.length > 0
+          ? await supabase.from('groups').delete().in('event_id', eventIds).not('id', 'in', `(${groupIdsInState.map(id => `'${id}'`).join(',')})`)
+          : await supabase.from('groups').delete().not('id', 'in', `(${groupIdsInState.map(id => `'${id}'`).join(',')})`);
         if (gDelErr) {
           console.error("Lỗi tại bước dọn dẹp GROUPS:", gDelErr.message);
           errors.push(`Dọn dẹp bảng đấu: ${gDelErr.message}`);
         }
       } else {
-        const { error: gClearErr } = await supabase.from('groups').delete();
+        const query = supabase.from('groups').delete();
+        const { error: gClearErr } = eventIds.length > 0 ? await query.in('event_id', eventIds) : await query.eq('id', 'dummy_safeguard');
         if (gClearErr) {
           console.error("Lỗi tại bước xóa sạch GROUPS:", gClearErr.message);
           errors.push(`Xóa sạch bảng đấu: ${gClearErr.message}`);
@@ -253,7 +262,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
           errors.push(`Dọn dẹp sự kiện: ${eDelErr.message}`);
         }
       } else {
-        const { error: eClearErr } = await supabase.from('events').delete();
+        const { error: eClearErr } = await supabase.from('events').delete().eq('id', 'dummy_safeguard');
         if (eClearErr) {
           console.error("Lỗi tại bước xóa sạch EVENTS:", eClearErr.message);
           errors.push(`Xóa sạch sự kiện: ${eClearErr.message}`);
@@ -860,9 +869,11 @@ export const useTournamentStore = create<AppState>()(
           const allTeams = Object.values(get().teams);
           if (allTeams.length === 0) return;
 
-          // Khởi tạo bảng rỗng
+          const activeEventId = get().currentEventId || 'event-default';
+
+          // Khởi tạo bảng rỗng với Event ID duy nhất
           const groupList: Group[] = Array.from({ length: numGroups }, (_, idx) => ({
-            id: `group-${idx + 1}`,
+            id: `group-${idx + 1}-${activeEventId}`,
             name: `Bảng ${String.fromCharCode(65 + idx)}`,
             teamIds: [],
           }));
@@ -903,14 +914,8 @@ export const useTournamentStore = create<AppState>()(
           set((state) => {
             const nextGroups: Record<string, Group> = {};
             const nextTeams = { ...state.teams };
-            const activeEventId = state.currentEventId || 'event-default';
 
-            const updatedGroupList = groupList.map((g) => ({
-              ...g,
-              id: `${g.id}-${activeEventId}`
-            }));
-
-            updatedGroupList.forEach((g) => {
+            groupList.forEach((g) => {
               nextGroups[g.id] = g;
               g.teamIds.forEach((tId) => {
                 if (nextTeams[tId]) {
@@ -926,7 +931,7 @@ export const useTournamentStore = create<AppState>()(
               groups: nextGroups,
               teams: nextTeams,
               matches: nextMatches,
-              activeGroupId: updatedGroupList[0]?.id || null,
+              activeGroupId: groupList[0]?.id || null,
             };
           });
 
@@ -1584,7 +1589,11 @@ export const useTournamentStore = create<AppState>()(
             // Khởi tạo cấu trúc map của events
             const eventsRecord: Record<string, EventData> = {};
             dbEvents.forEach(evt => {
-              const activeGroupId = evt.active_group_id !== undefined ? evt.active_group_id : (evt.activeGroupId || null);
+              let activeGroupId = evt.active_group_id !== undefined ? evt.active_group_id : (evt.activeGroupId || null);
+              if (activeGroupId && activeGroupId !== 'knockout' && !activeGroupId.endsWith(`-${evt.id}`)) {
+                activeGroupId = `${activeGroupId}-${evt.id}`;
+              }
+
               const advanceSelectionMode = evt.advance_selection_mode !== undefined ? evt.advance_selection_mode : (evt.advanceSelectionMode || 'auto');
               const manualQualifiedTeamIds = evt.manual_qualified_team_ids !== undefined ? evt.manual_qualified_team_ids : (evt.manualQualifiedTeamIds || []);
 
@@ -1606,10 +1615,14 @@ export const useTournamentStore = create<AppState>()(
             loadedTeams.forEach(t => {
               const eventId = t.event_id || t.eventId;
               if (eventsRecord[eventId]) {
+                let finalGroupId = t.group_id !== undefined ? t.group_id : (t.groupId || null);
+                if (finalGroupId && finalGroupId !== 'knockout' && !finalGroupId.endsWith(`-${eventId}`)) {
+                  finalGroupId = `${finalGroupId}-${eventId}`;
+                }
                 eventsRecord[eventId].teams[t.id] = {
                   id: t.id,
                   name: t.name,
-                  groupId: t.group_id !== undefined ? t.group_id : (t.groupId || null),
+                  groupId: finalGroupId,
                   seed: t.seed || 'none'
                 };
               }
@@ -1620,17 +1633,22 @@ export const useTournamentStore = create<AppState>()(
             loadedGroups.forEach(g => {
               const eventId = g.event_id || g.eventId;
               if (eventsRecord[eventId]) {
+                let finalGroupId = g.id;
+                if (!finalGroupId.endsWith(`-${eventId}`)) {
+                  finalGroupId = `${finalGroupId}-${eventId}`;
+                }
+
                 // Tối ưu hóa chuyên nghiệp: Tự động khôi phục và tính toán các đội thuộc bảng đấu từ dữ liệu 'teams' (đã nạp ở bước trên),
                 // tham khảo thông qua trường group_id để triệt tiêu vĩnh viễn việc bất đồng bộ hoặc lệch dữ liệu JSONB.
                 const fallbackTeamIds = Object.values(eventsRecord[eventId].teams)
-                  .filter(t => t.groupId === g.id)
+                  .filter(t => t.groupId === finalGroupId)
                   .map(t => t.id);
 
                 const dbTeamIds = g.team_ids !== undefined ? g.team_ids : (g.teamIds || []);
                 const teamIds = Array.isArray(dbTeamIds) && dbTeamIds.length > 0 ? dbTeamIds : fallbackTeamIds;
 
-                eventsRecord[eventId].groups[g.id] = {
-                  id: g.id,
+                eventsRecord[eventId].groups[finalGroupId] = {
+                  id: finalGroupId,
                   name: g.name,
                   teamIds: teamIds
                 };
@@ -1642,9 +1660,14 @@ export const useTournamentStore = create<AppState>()(
             loadedMatches.forEach(m => {
               const eventId = m.event_id || m.eventId;
               if (eventsRecord[eventId]) {
+                let finalGroupId = m.group_id !== undefined ? m.group_id : (m.groupId || null);
+                if (finalGroupId && finalGroupId !== 'knockout' && !finalGroupId.endsWith(`-${eventId}`)) {
+                  finalGroupId = `${finalGroupId}-${eventId}`;
+                }
+
                 eventsRecord[eventId].matches.push({
                   id: m.id,
-                  groupId: m.group_id !== undefined ? m.group_id : (m.groupId || null),
+                  groupId: finalGroupId,
                   teamAId: m.team_a_id !== undefined ? m.team_a_id : (m.teamAId || null),
                   teamBId: m.team_b_id !== undefined ? m.team_b_id : (m.teamBId || null),
                   scoreA: m.score_a !== undefined && m.score_a !== null ? m.score_a : (m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : null),
