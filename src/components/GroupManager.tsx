@@ -88,7 +88,7 @@ export default function GroupManager() {
               Phân Chia Bảng Đấu Vòng Tròn
             </h3>
             <p className="text-xs text-zinc-400 font-semibold">
-              Quản lý chia đấu thủ vào các bảng (tối đa 12 bảng). Chia hạt giống công bằng hoặc bốc thăm ngẫu nhiên.
+              Quản lý chia đấu thủ vào các bảng (tối đa 32 bảng). Chia hạt giống công bằng hoặc bốc thăm ngẫu nhiên.
             </p>
           </div>
 
@@ -101,11 +101,23 @@ export default function GroupManager() {
               id="select-num-groups"
               disabled={!isAdmin}
             >
-              {[2, 3, 4, 5, 6, 8, 10, 12].map((n) => (
-                <option key={n} value={n}>
-                  {n} Bảng đấu (A - {String.fromCharCode(65 + n - 1)})
-                </option>
-              ))}
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 32].map((n) => {
+                const getAlphabetLabel = (index: number) => {
+                  let name = '';
+                  let temp = index;
+                  while (temp >= 0) {
+                    name = String.fromCharCode((temp % 26) + 65) + name;
+                    temp = Math.floor(temp / 26) - 1;
+                  }
+                  return name;
+                };
+                const labelSuffix = n === 1 ? 'A' : `A - ${getAlphabetLabel(n - 1)}`;
+                return (
+                  <option key={n} value={n}>
+                    {n} Bảng đấu (Bảng {labelSuffix})
+                  </option>
+                );
+              })}
             </select>
           </div>
         </div>

@@ -825,7 +825,17 @@ export const useTournamentStore = create<AppState>()(
 
         setupGroups: (numGroups) => {
           if (!get().isAdmin) return;
-          if (numGroups < 1 || numGroups > 12) return;
+          if (numGroups < 1 || numGroups > 32) return;
+
+          const getGroupName = (index: number) => {
+            let name = '';
+            let temp = index;
+            while (temp >= 0) {
+              name = String.fromCharCode((temp % 26) + 65) + name;
+              temp = Math.floor(temp / 26) - 1;
+            }
+            return `Bảng ${name}`;
+          };
 
           set((state) => {
             const nextGroups: Record<string, Group> = {};
@@ -841,14 +851,14 @@ export const useTournamentStore = create<AppState>()(
             const activeEventId = state.currentEventId || 'event-default';
             for (let i = 0; i < numGroups; i++) {
               const gId = `group-${i + 1}-${activeEventId}`;
-              const gName = `Bảng ${String.fromCharCode(65 + i)}`; // Bảng A, B, C...
+              const gName = getGroupName(i);
               nextGroups[gId] = {
                 id: gId,
                 name: gName,
                 teamIds: [],
               };
             }
-
+            
             // Xóa tất cả các trận đấu vòng bảng cũ
             const nextMatches = state.matches.filter((m) => m.groupId === 'knockout');
 
@@ -865,16 +875,26 @@ export const useTournamentStore = create<AppState>()(
 
         autoGroupTeams: (method, numGroups) => {
           if (!get().isAdmin) return;
-          if (numGroups < 1 || numGroups > 12) return;
+          if (numGroups < 1 || numGroups > 32) return;
           const allTeams = Object.values(get().teams);
           if (allTeams.length === 0) return;
 
           const activeEventId = get().currentEventId || 'event-default';
 
+          const getGroupName = (index: number) => {
+            let name = '';
+            let temp = index;
+            while (temp >= 0) {
+              name = String.fromCharCode((temp % 26) + 65) + name;
+              temp = Math.floor(temp / 26) - 1;
+            }
+            return `Bảng ${name}`;
+          };
+
           // Khởi tạo bảng rỗng với Event ID duy nhất
           const groupList: Group[] = Array.from({ length: numGroups }, (_, idx) => ({
             id: `group-${idx + 1}-${activeEventId}`,
-            name: `Bảng ${String.fromCharCode(65 + idx)}`,
+            name: getGroupName(idx),
             teamIds: [],
           }));
 
