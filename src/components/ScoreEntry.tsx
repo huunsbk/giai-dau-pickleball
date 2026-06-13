@@ -243,7 +243,7 @@ export default function ScoreEntry() {
                                             inputMode="numeric"
                                             value={scores.a}
                                             onChange={(e) => handleScoreChange(m.id, 'a', e.target.value)}
-                                            className="w-[44px] h-[44px] sm:w-[50px] sm:h-[50px] text-center text-2xl sm:text-3xl font-black bg-blue-50/50 dark:bg-zinc-950 border-[2px] border-blue-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all font-mono order-2"
+                                            className="w-[54px] h-[44px] sm:w-[50px] sm:h-[50px] text-center text-[18px] p-[2px] font-black bg-blue-50/50 dark:bg-zinc-950 border-[2px] border-blue-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all font-mono order-2"
                                         />
                                     </div>
 
@@ -259,7 +259,7 @@ export default function ScoreEntry() {
                                             inputMode="numeric"
                                             value={scores.b}
                                             onChange={(e) => handleScoreChange(m.id, 'b', e.target.value)}
-                                            className="w-[44px] h-[44px] sm:w-[50px] sm:h-[50px] text-center text-2xl sm:text-3xl font-black bg-blue-50/50 dark:bg-zinc-950 border-[2px] border-blue-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all font-mono order-2 sm:order-1"
+                                            className="w-[54px] h-[44px] sm:w-[50px] sm:h-[50px] text-center text-[18px] p-[2px] font-black bg-blue-50/50 dark:bg-zinc-950 border-[2px] border-blue-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all font-mono order-2 sm:order-1"
                                         />
                                     </div>
                                 </div>

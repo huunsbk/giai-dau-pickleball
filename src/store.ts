@@ -498,6 +498,7 @@ export const useTournamentStore = create<AppState>()(
           // Self-migration check (Đã sửa lỗi Tenant ID mismatch)
           if (
             activeId !== '' &&
+            state.currentEventId === mergedState.currentEventId && // CHỈ MIGRATE NẾU KHÔNG ĐANG ĐỔI EVENT
             Object.keys(mergedState.teams || {}).length > 0 &&
             (!events[activeId] || Object.keys(events[activeId]?.teams || {}).length === 0)
           ) {
@@ -817,7 +818,13 @@ export const useTournamentStore = create<AppState>()(
             };
             return {
               events: nextEvents,
-              currentEventId: id
+              currentEventId: id,
+              teams: {},
+              groups: {},
+              matches: [],
+              activeGroupId: null,
+              advanceSelectionMode: 'auto',
+              manualQualifiedTeamIds: []
             };
           });
           logToStore('Nội Dung', `Thêm nội dung thi đấu mới: "${trimmedName}"`);
