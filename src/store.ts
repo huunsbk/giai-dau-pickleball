@@ -334,8 +334,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
         location: state.tournament.location,
         date: state.tournament.date,
         settings: state.tournament.settings,
-        current_event_id: state.currentEventId,
-        tenant_id: activeTenantId
+        current_event_id: state.currentEventId
       });
       if (tErr) {
         console.error("Lỗi tại bước 1 (tournament):", tErr.message, tErr.details);
@@ -1886,8 +1885,7 @@ export const useTournamentStore = create<AppState>()(
                 location: DEFAULT_TOURNAMENT.location,
                 date: DEFAULT_TOURNAMENT.date,
                 settings: DEFAULT_SETTINGS,
-                current_event_id: localState.activeTenantId === 'default' ? 'event-default' : `${localState.activeTenantId}__event-default`,
-                tenant_id: activeTenantId
+                current_event_id: localState.activeTenantId === 'default' ? 'event-default' : `${localState.activeTenantId}__event-default`
               };
               if (localState.userRole === 'admin1' || localState.userRole === 'admin2') {
                 await supabase.from('tournament').insert([defaultObj]);
