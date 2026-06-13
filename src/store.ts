@@ -146,7 +146,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               id: g.id,
               name: g.name,
               team_ids: Array.isArray(g.teamIds) ? g.teamIds : [],
-              event_id: evtId
+              event_id: evtId,
+              tenant_id: activeTenantId
             });
           });
         }
@@ -160,7 +161,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               name: t.name,
               group_id: t.groupId || null,
               seed: t.seed || 'none',
-              event_id: evtId
+              event_id: evtId,
+              tenant_id: activeTenantId
             });
           });
         }
@@ -183,7 +185,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               knockout_match_id: m.knockoutMatchId || null,
               next_match_id: m.nextMatchId || null,
               next_match_slot: m.nextMatchSlot || null,
-              event_id: evtId
+              event_id: evtId,
+              tenant_id: activeTenantId
             });
           });
         }
@@ -331,7 +334,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
         location: state.tournament.location,
         date: state.tournament.date,
         settings: state.tournament.settings,
-        current_event_id: state.currentEventId
+        current_event_id: state.currentEventId,
+        tenant_id: activeTenantId
       });
       if (tErr) {
         console.error("Lỗi tại bước 1 (tournament):", tErr.message, tErr.details);
@@ -352,7 +356,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
             settings: evt.settings || state.tournament.settings || DEFAULT_SETTINGS,
             active_group_id: evt.activeGroupId || null,
             advance_selection_mode: evt.advanceSelectionMode || 'auto',
-            manual_qualified_team_ids: evt.manualQualifiedTeamIds || []
+            manual_qualified_team_ids: evt.manualQualifiedTeamIds || [],
+            tenant_id: activeTenantId
           });
           if (eErr) {
             console.error(`Lỗi tại bước 2 (events) - ID ${evt.id}:`, eErr.message, eErr.details);
