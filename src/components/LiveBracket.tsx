@@ -98,7 +98,7 @@ export const LiveBracket: React.FC<LiveBracketProps> = ({ koMatches, currentEvt 
   const bronzeMatch = finalRoundMatches.find(m => m.knockoutRoundName?.includes('Hạng 3'));
 
   return (
-    <div className="bg-[#f8f9fa] dark:bg-zinc-900/50 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden relative" style={{ height: '550px' }}>
+    <div className="bg-[#f8f9fa] dark:bg-zinc-900/50 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden relative w-full h-full min-h-[600px]" style={{ width: '100%', height: '100%' }}>
       <TransformWrapper 
         initialScale={0.8} 
         minScale={0.2} 
@@ -106,8 +106,8 @@ export const LiveBracket: React.FC<LiveBracketProps> = ({ koMatches, currentEvt 
         centerOnInit={true}
         wheel={{ step: 0.1 }}
       >
-        <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }}>
-          <div className="p-12 flex flex-col items-start min-h-[600px] min-w-[800px] justify-center">
+        <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="p-12 flex flex-col items-center justify-center min-h-[600px] min-w-[800px]">
             <div className="flex gap-12 items-center">
               <MatchNode match={finalMatch} roundsMap={roundsMap} currentEvt={currentEvt} />
               
