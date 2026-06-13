@@ -351,7 +351,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
         const evt = state.events[evtId];
         if (evt) {
           const { error: eErr } = await supabase.from('events').upsert({
-            id: evt.id,
+            id: evtId,
             name: evt.name,
             settings: evt.settings || state.tournament.settings || DEFAULT_SETTINGS,
             active_group_id: evt.activeGroupId || null,
