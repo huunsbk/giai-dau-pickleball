@@ -461,14 +461,14 @@ export const useTournamentStore = create<AppState>()(
             };
           }
           
-          // Self-migration check
+          // Self-migration check (Đã sửa lỗi Tenant ID mismatch)
           if (
             Object.keys(mergedState.teams || {}).length > 0 &&
-            Object.keys(events['event-default']?.teams || {}).length === 0
+            Object.keys(events[activeId]?.teams || {}).length === 0
           ) {
-            events['event-default'] = {
-              id: 'event-default',
-              name: 'Đôi Nam Chuyên Nghiệp',
+            events[activeId] = {
+              id: activeId,
+              name: mergedState.currentEventId === 'event-default' ? 'Đôi Nam Chuyên Nghiệp' : (events[activeId]?.name || 'Nội dung mới'),
               teams: mergedState.teams,
               groups: mergedState.groups,
               matches: mergedState.matches,
