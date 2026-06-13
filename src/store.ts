@@ -362,11 +362,13 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
       });
       
       if (dbEventsArray.length > 0) {
-        const { error: eErr } = await supabase.from('events').upsert(dbEventsArray);
+        const { data: eData, error: eErr } = await supabase.from('events').upsert(dbEventsArray).select();
         if (eErr) {
-          console.error(`Lỗi tại bước 2 (events):`, eErr.message, eErr.details);
+          console.error(`[SYNC EVENTS FATAL] Lỗi tại bước 2 (events):`, eErr.message, eErr.details, "Payload:", dbEventsArray);
           errors.push(`Sự kiện: ${eErr.message}`);
           return; // Ngừng quá trình đồng bộ để bảo vệ toàn vẹn Foreign Key nếu events thất bại
+        } else {
+          console.log(`[SYNC EVENTS] Upserted ${eData?.length} events successfully.`, eData?.map((e: any) => e.id));
         }
       }
     } catch (exc: any) {

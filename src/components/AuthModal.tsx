@@ -145,12 +145,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                placeholder="Nhập tên đăng nhập"
+                placeholder="ví dụ: huunsbk"
                 autoFocus
-                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-250 dark:border-zinc-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-zinc-900 dark:text-zinc-150 focus:bg-white focus:outline-none"
+                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-250 dark:border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-zinc-150 focus:bg-white focus:outline-none"
                 required
               />
-              <User size={13} className="absolute left-3 top-3.5 text-zinc-400" />
             </div>
           </div>
 
@@ -163,10 +162,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="Nhập mật khẩu"
-                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-250 dark:border-zinc-800 rounded-xl pl-9 pr-9 py-2.5 text-xs text-zinc-900 dark:text-zinc-150 focus:bg-white focus:outline-none"
+                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-250 dark:border-zinc-800 rounded-xl pl-3 pr-9 py-2.5 text-xs text-zinc-900 dark:text-zinc-150 focus:bg-white focus:outline-none"
                 required
               />
-              <Lock size={13} className="absolute left-3 top-3.5 text-zinc-400" />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -188,7 +186,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         </form>
 
         <div className="text-[10px] text-zinc-400 dark:text-zinc-500 text-center border-t border-zinc-100 dark:border-zinc-850 pt-2.5">
-          Nếu chưa có tài khoản, vui lòng liên hệ Admin cấp 1 (@huunsbk) để được phê duyệt và kích hoạt phân rã.
+          Nếu chưa có tài khoản, vui lòng liên hệ Nguyễn Văn Hữu để được phê duyệt
         </div>
 
       </div>
