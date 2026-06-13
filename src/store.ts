@@ -147,7 +147,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               name: g.name,
               team_ids: Array.isArray(g.teamIds) ? g.teamIds : [],
               event_id: evtId,
-              tenant_id: activeTenantId
+              tenant_id: activeTenantId,
+              tournament_id: tournamentId
             });
           });
         }
@@ -162,7 +163,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               group_id: t.groupId || null,
               seed: t.seed || 'none',
               event_id: evtId,
-              tenant_id: activeTenantId
+              tenant_id: activeTenantId,
+              tournament_id: tournamentId
             });
           });
         }
@@ -186,7 +188,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               next_match_id: m.nextMatchId || null,
               next_match_slot: m.nextMatchSlot || null,
               event_id: evtId,
-              tenant_id: activeTenantId
+              tenant_id: activeTenantId,
+              tournament_id: tournamentId
             });
           });
         }
@@ -335,7 +338,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
         date: state.tournament.date,
         settings: state.tournament.settings,
         current_event_id: state.currentEventId
-      });
+      }, { onConflict: 'id' });
       if (tErr) {
         console.error("Lỗi tại bước 1 (tournament):", tErr.message, tErr.details);
         errors.push(`Giải đấu: ${tErr.message}`);
@@ -346,6 +349,26 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
       return;
     }
 
+    // Bước 1.5: Đảm bảo dòng giải đấu cho Tenant đã tồn tại trên Supabase
+    try {
+      const { data: exist } = await supabase
+        .from('tournament')
+        .select('id')
+        .eq('id', activeTenantId)
+        .maybeSingle();
+
+      if (!exist) {
+        await supabase.from('tournament').insert({
+          id: activeTenantId,
+          name: `Giải đấu của ${activeTenantId}`,
+          settings: DEFAULT_SETTINGS,
+          tenant_id: activeTenantId
+        });
+      }
+    } catch (err) {
+      console.error("Lỗi khởi tạo Tenant Tournament:", err);
+    }
+
     // Bước 2: Ghi dữ liệu vào bảng `events` (sau khi đã có tournament)
     try {
       const dbEventsArray = eventIds.map(evtId => {
@@ -354,15 +377,16 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
           id: evtId,
           name: evt.name,
           settings: evt.settings || state.tournament.settings || DEFAULT_SETTINGS,
-          active_group_id: evt.activeGroupId || null,
+          active_group_id: (evt.activeGroupId && evt.activeGroupId !== 'knockout') ? evt.activeGroupId : null,
           advance_selection_mode: evt.advanceSelectionMode || 'auto',
           manual_qualified_team_ids: evt.manualQualifiedTeamIds || [],
-          tenant_id: activeTenantId
+          tenant_id: activeTenantId,
+          tournament_id: tournamentId
         };
       });
       
       if (dbEventsArray.length > 0) {
-        const { data: eData, error: eErr } = await supabase.from('events').upsert(dbEventsArray).select();
+        const { data: eData, error: eErr } = await supabase.from('events').upsert(dbEventsArray, { onConflict: 'id' }).select();
         if (eErr) {
           console.error(`[SYNC EVENTS FATAL] Lỗi tại bước 2 (events):`, eErr.message, eErr.details, "Payload:", dbEventsArray);
           errors.push(`Sự kiện: ${eErr.message}`);
@@ -379,7 +403,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
     // Bước 3: Ghi dữ liệu vào bảng `groups` (sau khi đã có events)
     try {
       if (uniqueGroups.length > 0) {
-        const { error: gErr } = await supabase.from('groups').upsert(uniqueGroups);
+        const { error: gErr } = await supabase.from('groups').upsert(uniqueGroups, { onConflict: 'id' });
         if (gErr) {
           console.error("Lỗi tại bước 3 (groups):", gErr.message, gErr.details);
           errors.push(`Bảng đấu: ${gErr.message}`);
@@ -392,7 +416,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
     // Bước 4: Ghi dữ liệu vào bảng `teams` (sau khi đã có groups và events)
     try {
       if (uniqueTeams.length > 0) {
-        const { error: tmErr } = await supabase.from('teams').upsert(uniqueTeams);
+        const { error: tmErr } = await supabase.from('teams').upsert(uniqueTeams, { onConflict: 'id' });
         if (tmErr) {
           console.error("Lỗi tại bước 4 (teams):", tmErr.message, tmErr.details);
           errors.push(`Đội: ${tmErr.message}`);
@@ -405,7 +429,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
     // Bước 5: Ghi dữ liệu vào bảng `matches` (sau khi đã có đầy đủ teams, groups, events)
     try {
       if (uniqueMatches.length > 0) {
-        const { error: mErr } = await supabase.from('matches').upsert(uniqueMatches);
+        const { error: mErr } = await supabase.from('matches').upsert(uniqueMatches, { onConflict: 'id' });
         if (mErr) {
           console.error("Lỗi tại bước 5 (matches):", mErr.message, mErr.details);
           errors.push(`Trận đấu: ${mErr.message}`);
@@ -451,13 +475,13 @@ export const useTournamentStore = create<AppState>()(
 
           const mergedState = { ...state, ...nextState };
           
-          const activeId = mergedState.currentEventId || 'event-default';
+          const activeId = mergedState.currentEventId || '';
           const events = { ...mergedState.events };
           
-          if (!events[activeId]) {
+          if (activeId !== '' && !events[activeId] && activeId === 'event-default') {
             events[activeId] = {
               id: activeId,
-              name: mergedState.currentEventId === 'event-default' ? 'Đôi Nam Chuyên Nghiệp' : 'Nội dung mới',
+              name: 'Đôi Nam Chuyên Nghiệp',
               teams: {},
               groups: {},
               matches: [],
@@ -470,16 +494,24 @@ export const useTournamentStore = create<AppState>()(
           
           // Self-migration check (Đã sửa lỗi Tenant ID mismatch)
           if (
+            activeId !== '' &&
             Object.keys(mergedState.teams || {}).length > 0 &&
-            Object.keys(events[activeId]?.teams || {}).length === 0
+            (!events[activeId] || Object.keys(events[activeId]?.teams || {}).length === 0)
           ) {
+            if (!events[activeId]) {
+              events[activeId] = {
+                id: activeId,
+                name: 'Nội dung mới',
+                teams: {}, groups: {}, matches: [], settings: mergedState.tournament?.settings || DEFAULT_SETTINGS,
+                activeGroupId: null, advanceSelectionMode: 'auto', manualQualifiedTeamIds: []
+              };
+            }
             events[activeId] = {
-              id: activeId,
-              name: mergedState.currentEventId === 'event-default' ? 'Đôi Nam Chuyên Nghiệp' : (events[activeId]?.name || 'Nội dung mới'),
+              ...events[activeId],
               teams: mergedState.teams,
               groups: mergedState.groups,
               matches: mergedState.matches,
-              activeGroupId: mergedState.activeGroupId,
+              activeGroupId: mergedState.activeGroupId || null,
               advanceSelectionMode: mergedState.advanceSelectionMode || 'auto',
               manualQualifiedTeamIds: mergedState.manualQualifiedTeamIds || [],
               settings: mergedState.tournament?.settings || DEFAULT_SETTINGS,
@@ -496,13 +528,13 @@ export const useTournamentStore = create<AppState>()(
 
           const isTournamentSettingsChanged = nextState.tournament && nextState.tournament.settings;
 
-          if (hasFlatChanges || isTournamentSettingsChanged) {
+          if (activeId !== '' && events[activeId] && (hasFlatChanges || isTournamentSettingsChanged)) {
             events[activeId] = {
               ...events[activeId],
               teams: mergedState.teams || {},
               groups: mergedState.groups || {},
               matches: mergedState.matches || [],
-              activeGroupId: mergedState.activeGroupId,
+              activeGroupId: mergedState.activeGroupId || null,
               advanceSelectionMode: mergedState.advanceSelectionMode || 'auto',
               manualQualifiedTeamIds: mergedState.manualQualifiedTeamIds || [],
               settings: mergedState.tournament?.settings || events[activeId].settings || DEFAULT_SETTINGS,
@@ -768,11 +800,17 @@ export const useTournamentStore = create<AppState>()(
           if (!event) return;
 
           // 1. Xóa trên Supabase trước (theo thứ tự FK)
+          // Đặt active_group_id thành null trước để gỡ bỏ ràng buộc khóa ngoại (nếu có)
           try {
-            await supabase.from('matches').delete().eq('event_id', id);
-            await supabase.from('teams').delete().eq('event_id', id);
-            await supabase.from('groups').delete().eq('event_id', id);
-            await supabase.from('events').delete().eq('id', id);
+            await supabase.from('events').update({ active_group_id: null }).eq('id', id);
+            const { error: e1 } = await supabase.from('matches').delete().eq('event_id', id);
+            if (e1) throw e1;
+            const { error: e2 } = await supabase.from('teams').delete().eq('event_id', id);
+            if (e2) throw e2;
+            const { error: e3 } = await supabase.from('groups').delete().eq('event_id', id);
+            if (e3) throw e3;
+            const { error: e4 } = await supabase.from('events').delete().eq('id', id);
+            if (e4) throw e4;
           } catch (err) {
             console.error("Lỗi xóa dữ liệu liên quan trên Supabase:", err);
           }
