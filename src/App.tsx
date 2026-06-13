@@ -10,6 +10,7 @@ import { useTournamentStore } from './store';
 import Dashboard from './components/Dashboard';
 import TeamManager from './components/TeamManager';
 import GroupManager from './components/GroupManager';
+import ScoreEntry from './components/ScoreEntry';
 import SchedulerAndScoreKeeper from './components/SchedulerAndScoreKeeper';
 import Standings from './components/Standings';
 import KnockoutBracket from './components/KnockoutBracket';
@@ -32,6 +33,7 @@ import {
   Sun,
   Moon,
   Zap,
+  Gamepad2,
   FileDown,
   UserCheck,
   ShieldAlert,
@@ -98,7 +100,7 @@ export default function App() {
       const hash = window.location.hash;
       if (hash) {
         const cleanHash = hash.replace(/^#\/?/, '').trim();
-        if (cleanHash && !cleanHash.includes('/') && !['dashboard', 'teams', 'groups', 'matches', 'standings', 'knockout', 'live', 'export', 'accounts', 'logs'].includes(cleanHash)) {
+        if (cleanHash && !cleanHash.includes('/') && !['dashboard', 'teams', 'groups', 'scoreEntry', 'matches', 'standings', 'knockout', 'live', 'export', 'accounts', 'logs'].includes(cleanHash)) {
           return cleanHash.toLowerCase();
         }
       }
@@ -113,7 +115,7 @@ export default function App() {
             seg !== 'dist' && 
             seg !== 'pic_huu' && 
             seg !== 'pic-huu' &&
-            !['dashboard', 'teams', 'groups', 'matches', 'standings', 'knockout', 'live', 'export', 'accounts', 'logs'].includes(seg)
+            !['dashboard', 'teams', 'groups', 'scoreEntry', 'matches', 'standings', 'knockout', 'live', 'export', 'accounts', 'logs'].includes(seg)
           ) {
             return seg;
           }
@@ -202,6 +204,7 @@ export default function App() {
     { id: 'dashboard', label: 'Trang chủ', icon: Trophy, roles: ['admin1', 'admin2'] },
     { id: 'teams', label: 'Quản lý đội', icon: Users, roles: ['admin1', 'admin2'] },
     { id: 'groups', label: 'Chia bảng', icon: Layers, roles: ['admin1', 'admin2'] },
+    { id: 'scoreEntry', label: 'Nhập điểm', icon: Gamepad2, roles: ['admin1', 'admin2'] },
     { id: 'matches', label: 'Lịch & Kết quả', icon: CalendarDays, roles: ['admin1', 'admin2'] },
     { id: 'standings', label: 'Tuyển chọn vòng trong', icon: FileSpreadsheet, roles: ['admin1', 'admin2'] },
     { id: 'knockout', label: 'Sơ đồ trực tiếp', icon: Network, roles: ['admin1', 'admin2'] },
@@ -389,6 +392,7 @@ export default function App() {
               {selectedTab === 'dashboard' && <Dashboard />}
               {selectedTab === 'teams' && <TeamManager />}
               {selectedTab === 'groups' && <GroupManager />}
+              {selectedTab === 'scoreEntry' && <ScoreEntry />}
               {selectedTab === 'matches' && <SchedulerAndScoreKeeper />}
               {selectedTab === 'standings' && <Standings />}
               {selectedTab === 'knockout' && <KnockoutBracket />}

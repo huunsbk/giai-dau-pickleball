@@ -631,11 +631,12 @@ export default function LiveDashboard() {
                             const group = evt.groups[m.groupId];
                             const absoluteIndex = idx + 1;
                             const isFinished = m.status === 'finished';
+                            const isPlaying = m.status === 'playing';
                             
                             let roundClass = "border-zinc-200 dark:border-zinc-800";
                             let roundLabel = "";
                             if (group) {
-                              roundClass = isFinished ? "border-emerald-300 dark:border-emerald-800" : "border-[#5b9e38] dark:border-[#4c842f]";
+                              roundClass = isFinished ? "border-emerald-300 dark:border-emerald-800" : isPlaying ? "border-blue-300 dark:border-blue-800" : "border-[#5b9e38] dark:border-[#4c842f]";
                               const groupNameUpper = group.name.toUpperCase();
                               roundLabel = groupNameUpper.startsWith('BẢNG') ? groupNameUpper : `BẢNG ${groupNameUpper}`;
                             } else {
@@ -648,14 +649,16 @@ export default function LiveDashboard() {
                               else { roundClass = "border-[#4169e1] dark:border-[#3454b4]"; roundLabel = rName ? rName.toUpperCase() : `VÒNG KO ${m.round}`; }
                               if (isFinished) {
                                 roundClass = "border-emerald-300 dark:border-emerald-800";
+                              } else if (isPlaying) {
+                                roundClass = "border-blue-300 dark:border-blue-800";
                               }
                             }
 
-                            const bgClass = isFinished ? "bg-emerald-50/40 dark:bg-emerald-950/20" : "bg-white dark:bg-zinc-950";
+                            const bgClass = isFinished ? "bg-emerald-50/40 dark:bg-emerald-950/20" : isPlaying ? "bg-blue-50/40 dark:bg-blue-950/20" : "bg-white dark:bg-zinc-950";
 
                             return (
                               <div key={m.id} className={`flex items-center gap-2 ${bgClass} py-1.5 px-2 rounded-lg border-[1.5px] ${roundClass} text-[11px]`}>
-                                <div className={`w-[36px] h-[32px] rounded flex flex-col items-center justify-center font-bold shrink-0 shadow-sm border ${isFinished ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-[#114666] text-white border-[#0d344d]'}`}>
+                                <div className={`w-[36px] h-[32px] rounded flex flex-col items-center justify-center font-bold shrink-0 shadow-sm border ${isFinished ? 'bg-emerald-600 text-white border-emerald-700' : isPlaying ? 'bg-blue-600 text-white border-blue-700' : 'bg-[#114666] text-white border-[#0d344d]'}`}>
                                   <span className="text-[14px] leading-none">{absoluteIndex}</span>
                                 </div>
                                 <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
@@ -672,6 +675,10 @@ export default function LiveDashboard() {
                                   {isFinished ? (
                                     <span className="text-[12px] font-black tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded leading-none shrink-0 border border-emerald-200/50 dark:border-emerald-800 shadow-sm">
                                       {m.scoreA} - {m.scoreB}
+                                    </span>
+                                  ) : isPlaying ? (
+                                    <span className="text-[9px] font-bold text-blue-100 bg-blue-600 dark:bg-blue-600 px-1.5 py-1 rounded leading-none shrink-0 border border-blue-700 shadow-sm">
+                                      ĐANG ĐẤU
                                     </span>
                                   ) : (
                                     <span className="text-[9px] font-bold text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-1.5 py-1 rounded leading-none shrink-0 border border-zinc-200/50 dark:border-zinc-850 shadow-sm">

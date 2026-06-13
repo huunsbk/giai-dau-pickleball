@@ -68,6 +68,7 @@ interface AppState {
   generateMatchesForGroup: (groupId: string) => void;
   clearMatchesForGroup: (groupId: string) => void;
   updateMatchScore: (matchId: string, scoreA: number | null, scoreB: number | null) => void;
+  updateMatchStatus: (matchId: string, status: 'pending' | 'playing' | 'finished') => void;
   resetMatchScore: (matchId: string) => void;
   generateAllSchedules: () => void;
 
@@ -1320,6 +1321,39 @@ export const useTournamentStore = create<AppState>()(
           if (group) {
             logToStore('Dọn Lịch', `Hủy toàn bộ lịch thi đấu và điểm số của bảng [${group.name}].`);
           }
+        },
+
+        updateMatchStatus: (matchId, status) => {
+          if (!get().isAdmin) return;
+          set((state) => {
+            const matchesCopy = state.matches.map((m) => {
+              if (m.id !== matchId) return m;
+              return { ...m, status };
+            });
+
+            // Update in specific event
+            const eventUpdates: Record<string, any> = {};
+            // find which event this match belongs to
+            let targetEventId: string | undefined;
+            Object.values(state.events).forEach(evt => {
+              if (evt.matches?.some(em => em.id === matchId)) {
+                targetEventId = evt.id;
+              }
+            });
+            
+            if (targetEventId) {
+              const evt = state.events[targetEventId];
+              eventUpdates[targetEventId] = {
+                ...evt,
+                matches: (evt.matches || []).map(em => em.id === matchId ? { ...em, status } : em)
+              };
+            }
+
+            return {
+              matches: matchesCopy,
+              events: { ...state.events, ...eventUpdates },
+            };
+          });
         },
 
         updateMatchScore: (matchId, scoreA, scoreB) => {

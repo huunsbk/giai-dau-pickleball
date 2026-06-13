@@ -43,7 +43,7 @@ export interface Match {
   scoreA: number | null; // Điểm đội A (null nếu chưa đấu)
   scoreB: number | null; // Điểm đội B (null nếu chưa đấu)
   winnerId: string | null; // ID đội thắng (null nếu chưa đấu hoặc hòa)
-  status: 'pending' | 'finished';
+  status: 'pending' | 'playing' | 'finished';
   round: number; // Vòng đấu (chỉ số 1, 2, 3...)
   knockoutRoundName?: string; // Tên vòng loại trực tiếp, VD: "Vòng 16", "Tứ kết", "Bán kết", "Chung kết"
   knockoutMatchId?: string; // Định danh trận trong nhánh loại trực tiếp (VD: "QF1", "SF1", "F")
