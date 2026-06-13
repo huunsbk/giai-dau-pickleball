@@ -680,7 +680,7 @@ export default function LiveDashboard() {
                                 return (
                                   <div key={m.id} className={`flex items-center gap-2 bg-white dark:bg-zinc-950 py-1.5 px-2 rounded-lg border-[1.5px] ${roundClass} text-[11px]`}>
                                     <div className="w-6 h-6 rounded-full bg-[#114666] text-white flex items-center justify-center font-bold shrink-0 shadow-sm border border-[#0d344d]">
-                                      {m.groupId !== 'knockout' ? evtMatches.filter(x => x.groupId !== 'knockout').findIndex(x => x.id === m.id) + 1 : evtMatches.filter(x => x.groupId === 'knockout').findIndex(x => x.id === m.id) + 1}
+                                      {m.groupId !== 'knockout' ? pendingMatches.filter(x => x.groupId !== 'knockout').findIndex(x => x.id === m.id) + 1 : pendingMatches.filter(x => x.groupId === 'knockout').findIndex(x => x.id === m.id) + 1}
                                     </div>
                                     <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
                                       <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700">
@@ -922,7 +922,7 @@ export default function LiveDashboard() {
                               return (
                                 <div key={m.id} className={`flex items-center gap-3 bg-white dark:bg-zinc-950 py-2.5 px-3.5 rounded-xl border-[1.5px] ${roundClass} shadow-sm hover:opacity-90 transition-opacity`}>
                                   <div className="w-9 h-9 rounded-full bg-[#114666] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm border border-[#0d344d]">
-                                    {m.groupId !== 'knockout' ? evtMatches.filter(x => x.groupId !== 'knockout').findIndex(x => x.id === m.id) + 1 : evtMatches.filter(x => x.groupId === 'knockout').findIndex(x => x.id === m.id) + 1}
+                                    {m.groupId !== 'knockout' ? pendingMatches.filter(x => x.groupId !== 'knockout').findIndex(x => x.id === m.id) + 1 : pendingMatches.filter(x => x.groupId === 'knockout').findIndex(x => x.id === m.id) + 1}
                                   </div>
                                   <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
                                     <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
