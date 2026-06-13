@@ -224,7 +224,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
       }
       
       if (matchIdsInState.length > 0) {
-        const { error: mDelErr } = await mQuery.not('id', 'in', matchIdsInState);
+        const { error: mDelErr } = await mQuery.not('id', 'in', `(${matchIdsInState.join(',')})`);
         if (mDelErr) {
           console.error("Lỗi tại bước dọn dẹp MATCHES:", mDelErr.message);
           errors.push(`Dọn dẹp trận đấu: ${mDelErr.message}`);
@@ -250,7 +250,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
       }
       
       if (teamIdsInState.length > 0) {
-        const { error: tDelErr } = await tQuery.not('id', 'in', teamIdsInState);
+        const { error: tDelErr } = await tQuery.not('id', 'in', `(${teamIdsInState.join(',')})`);
         if (tDelErr) {
           console.error("Lỗi tại bước dọn dẹp TEAMS:", tDelErr.message);
           errors.push(`Dọn dẹp đội: ${tDelErr.message}`);
@@ -276,7 +276,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
       }
 
       if (groupIdsInState.length > 0) {
-        const { error: gDelErr } = await gQuery.not('id', 'in', groupIdsInState);
+        const { error: gDelErr } = await gQuery.not('id', 'in', `(${groupIdsInState.join(',')})`);
         if (gDelErr) {
           console.error("Lỗi tại bước dọn dẹp GROUPS:", gDelErr.message);
           errors.push(`Dọn dẹp bảng đấu: ${gDelErr.message}`);
@@ -302,7 +302,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
       }
 
       if (eventIds.length > 0) {
-        const { error: eDelErr } = await eQuery.not('id', 'in', eventIds);
+        const { error: eDelErr } = await eQuery.not('id', 'in', `(${eventIds.join(',')})`);
         if (eDelErr) {
           console.error("Lỗi tại bước dọn dẹp EVENTS:", eDelErr.message);
           errors.push(`Dọn dẹp sự kiện: ${eDelErr.message}`);
