@@ -625,7 +625,7 @@ export default function LiveDashboard() {
                         <p className="text-[11px] text-zinc-400 py-6 text-center">Chưa có lịch thi đấu.</p>
                       ) : (
                         <div className="space-y-1">
-                          {evtMatches.map((m, idx) => {
+                          {balanceMatchesRestTime(evtMatches).map((m, idx) => {
                             const teamA = evt.teams[m.teamAId]?.name || m.teamAId;
                             const teamB = evt.teams[m.teamBId]?.name || m.teamBId;
                             const group = evt.groups[m.groupId];
@@ -636,7 +636,8 @@ export default function LiveDashboard() {
                             let roundLabel = "";
                             if (group) {
                               roundClass = isFinished ? "border-emerald-300 dark:border-emerald-800" : "border-[#5b9e38] dark:border-[#4c842f]";
-                              roundLabel = `BẢNG ${group.name}`;
+                              const groupNameUpper = group.name.toUpperCase();
+                              roundLabel = groupNameUpper.startsWith('BẢNG') ? groupNameUpper : `BẢNG ${groupNameUpper}`;
                             } else {
                               const rName = (m.knockoutRoundName || "").toLowerCase();
                               if (rName.includes("32")) { roundClass = "border-[#20b2aa] dark:border-[#1a8e88]"; roundLabel = "VÒNG 32"; }
