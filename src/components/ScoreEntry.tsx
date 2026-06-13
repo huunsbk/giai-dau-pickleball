@@ -211,7 +211,7 @@ export default function ScoreEntry() {
                        const scores = localScores[m.id] || { a: '', b: '' };
 
                        return (
-                           <div key={m.id} className="relative bg-white dark:bg-zinc-900 py-[5px] px-4 w-[627px] h-[76.6px] mx-auto border rounded-[1.5rem] border-blue-200 dark:border-blue-900 shadow-sm hover:shadow-md transition-shadow">
+                           <div key={m.id} className="relative bg-white dark:bg-zinc-900 py-3 sm:py-[5px] px-2 sm:px-4 w-full sm:w-[627px] h-auto sm:h-[76.6px] min-h-[90px] mx-auto border rounded-2xl sm:rounded-[1.5rem] border-blue-200 dark:border-blue-900 shadow-sm hover:shadow-md transition-shadow">
                                 <div className="absolute top-0 inset-x-0 -mt-3.5 flex justify-center">
                                     <span className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 border border-blue-200 dark:border-blue-800 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xs">
                                         {roundLabel}
@@ -220,46 +220,47 @@ export default function ScoreEntry() {
                                 
                                 <button
                                     onClick={() => saveScore(m.id)}
-                                    className="absolute left-5 top-1/2 -translate-y-1/2 p-3.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white dark:bg-emerald-900/30 dark:hover:bg-emerald-600 dark:text-emerald-500 dark:hover:text-white rounded-2xl transition-all cursor-pointer shadow-sm"
+                                    className="absolute left-2 sm:left-5 top-1/2 -translate-y-1/2 p-2 sm:p-3.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white dark:bg-emerald-900/30 dark:hover:bg-emerald-600 dark:text-emerald-500 dark:hover:text-white rounded-xl sm:rounded-2xl transition-all cursor-pointer shadow-sm z-10"
                                     title="Hoàn Thành"
                                 >
-                                    <CheckSquare size={24} />
+                                    <CheckSquare className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </button>
 
                                 <button
                                     onClick={() => handleCancelPlaying(m.id)}
-                                    className="absolute right-5 top-1/2 -translate-y-1/2 p-3.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-2xl transition-all cursor-pointer"
+                                    className="absolute right-2 sm:right-5 top-1/2 -translate-y-1/2 p-2 sm:p-3.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-xl sm:rounded-2xl transition-all cursor-pointer z-10"
                                     title="Hủy đang diễn ra"
                                 >
-                                    <X size={24} />
+                                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </button>
                                 
-                                <div className="flex items-center justify-center gap-6 mt-2 flex-wrap sm:flex-nowrap w-full">
+                                <div className="flex items-center justify-center pb-1 sm:pb-0 sm:gap-6 gap-2 mt-4 sm:mt-2 flex-nowrap w-full px-10 sm:px-0">
                                     {/* Team A */}
-                                    <div className="flex flex-col sm:flex-row items-center gap-4 w-[240px] justify-end">
-                                        <div className="text-[17px] font-extrabold text-zinc-800 dark:text-zinc-100 text-right w-[180px] shrink-0 truncate">{teamA}</div>
+                                    <div className="flex flex-col sm:flex-row items-center sm:gap-4 gap-1.5 sm:w-[240px] flex-1 sm:justify-end">
+                                        <div className="text-[12px] sm:text-[17px] font-extrabold text-zinc-800 dark:text-zinc-100 text-center sm:text-right w-full sm:w-[180px] shrink-0 truncate px-0.5 order-1">{teamA}</div>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             value={scores.a}
                                             onChange={(e) => handleScoreChange(m.id, 'a', e.target.value)}
-                                            className="w-[50px] h-[50px] text-center text-3xl font-black bg-blue-50/50 dark:bg-zinc-950 border-[2px] border-blue-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 rounded-2xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all font-mono"
+                                            className="w-[44px] h-[44px] sm:w-[50px] sm:h-[50px] text-center text-2xl sm:text-3xl font-black bg-blue-50/50 dark:bg-zinc-950 border-[2px] border-blue-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all font-mono order-2"
                                         />
                                     </div>
 
                                     {/* DIVIDER */}
                                     <div className="hidden sm:flex text-zinc-300 dark:text-zinc-700 font-black text-3xl">-</div>
+                                    <div className="flex sm:hidden text-zinc-300 dark:text-zinc-700 font-black text-xl mt-4 shrink-0 px-0.5">:</div>
 
                                     {/* Team B */}
-                                    <div className="flex flex-col sm:flex-row items-center gap-4 w-[240px] justify-start">
+                                    <div className="flex flex-col sm:flex-row items-center sm:gap-4 gap-1.5 sm:w-[240px] flex-1 sm:justify-start">
+                                        <div className="text-[12px] sm:text-[17px] font-extrabold text-zinc-800 dark:text-zinc-100 text-center sm:text-left w-full sm:w-[180px] shrink-0 truncate px-0.5 order-1 sm:order-2">{teamB}</div>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             value={scores.b}
                                             onChange={(e) => handleScoreChange(m.id, 'b', e.target.value)}
-                                            className="w-[50px] h-[50px] text-center text-3xl font-black bg-blue-50/50 dark:bg-zinc-950 border-[2px] border-blue-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 rounded-2xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all font-mono"
+                                            className="w-[44px] h-[44px] sm:w-[50px] sm:h-[50px] text-center text-2xl sm:text-3xl font-black bg-blue-50/50 dark:bg-zinc-950 border-[2px] border-blue-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all font-mono order-2 sm:order-1"
                                         />
-                                        <div className="text-[17px] font-extrabold text-zinc-800 dark:text-zinc-100 text-left w-[180px] shrink-0 truncate">{teamB}</div>
                                     </div>
                                 </div>
                             </div>
