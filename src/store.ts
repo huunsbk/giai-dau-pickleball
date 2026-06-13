@@ -31,9 +31,11 @@ interface AppState {
   // Multi-tier accounts configuration
   accounts: Account[];
   currentUser: string | null;
+  currentSessionId: string | null;
   userRole: 'guest' | 'admin1' | 'admin2'; // guest = viewer, admin1 = huunsbk (root), admin2 = level 2 account
   activeTenantId: string; // 'default' or username of level 2 account
-  setAuthStatus: (role: 'guest' | 'admin1' | 'admin2', username: string | null, tenantId: string) => void;
+  setAuthStatus: (role: 'guest' | 'admin1' | 'admin2', username: string | null, tenantId: string, sessionId?: string) => void;
+  logout: () => void;
   setTenantId: (tenantId: string) => Promise<void>;
   addAccount2: (acc: Account) => Promise<boolean>;
   updateAccount2: (acc: Account) => Promise<boolean>;
@@ -627,19 +629,45 @@ export const useTournamentStore = create<AppState>()(
         currentEventId: 'event-default',
         accounts: [],
         currentUser: null,
+        currentSessionId: null,
         userRole: 'guest',
         activeTenantId: 'default',
         isLoadingSupabase: false,
-        setAuthStatus: (role, username, tenantId) => {
+        setAuthStatus: (role, username, tenantId, providedSessionId) => {
+          const sessionId = providedSessionId || Date.now().toString() + Math.random().toString(36).substring(2, 9);
+          
           originalSet({
             userRole: role,
             currentUser: username,
+            currentSessionId: sessionId,
             activeTenantId: tenantId,
             isAdmin: role === 'admin1' || role === 'admin2',
             selectedTab: 'dashboard',
             isLoadingSupabase: true
           });
+          
+          if (username && role === 'admin2') {
+            // Cập nhật session_id lên Supabase (fire and forget)
+            supabase.from('accounts')
+              .update({ session_id: sessionId })
+              .eq('username', username)
+              .then(({ error }) => {
+                if (error) console.warn('Không thể cập nhật session_id:', error);
+              });
+          }
+          
           get().initSupabase();
+        },
+        logout: () => {
+          set({
+            userRole: 'guest',
+            currentUser: null,
+            currentSessionId: null,
+            activeTenantId: 'default',
+            isAdmin: false,
+          });
+          localStorage.removeItem('pickleball-tournament-cache');
+          window.location.reload();
         },
         setTenantId: async (tenantId) => {
           originalSet({ activeTenantId: tenantId, isLoadingSupabase: true });
@@ -1786,6 +1814,7 @@ export const useTournamentStore = create<AppState>()(
 
             // Tải danh sách tài khoản từ bảng 'accounts' chuyên dụng, có fallback về 'accounts_config'
             let loadedAccounts: Account[] = [];
+            let forceLogout = false;
             try {
               const { data: accData, error: accError } = await supabase.from('accounts').select('*');
               if (!accError && accData && accData.length > 0) {
@@ -1793,8 +1822,17 @@ export const useTournamentStore = create<AppState>()(
                   username: row.username,
                   password: row.password,
                   displayName: row.display_name || row.displayName,
-                  tournamentName: row.tournament_name || row.tournamentName
+                  tournamentName: row.tournament_name || row.tournamentName,
+                  session_id: row.session_id
                 }));
+                
+                // Kiểm tra bảo mật phiên đăng nhập (chỉ áp dụng cho admin2)
+                if (localState.userRole === 'admin2' && localState.currentUser) {
+                  const myLatestDbAccount = loadedAccounts.find(a => a.username === localState.currentUser);
+                  if (myLatestDbAccount && myLatestDbAccount.session_id && myLatestDbAccount.session_id !== localState.currentSessionId) {
+                    forceLogout = true;
+                  }
+                }
               } else {
                 const accountsConfigRow = (tData || []).find((row: any) => row.id === 'accounts_config');
                 loadedAccounts = accountsConfigRow?.settings?.accounts || [];
@@ -1804,6 +1842,12 @@ export const useTournamentStore = create<AppState>()(
               loadedAccounts = accountsConfigRow?.settings?.accounts || [];
             }
             originalSet({ accounts: loadedAccounts });
+            
+            if (forceLogout) {
+              console.warn('Phát hiện đăng nhập song song. Tự động đăng xuất phiên làm việc cũ.');
+              get().logout();
+              return; // Ngừng quá trình initSupabase
+            }
 
             // Lọc ra các giải đấu thông thường (bỏ qua bản ghi cấu hình tài khoản)
             const regularTournaments = (tData || []).filter((row: any) => row.id !== 'accounts_config');

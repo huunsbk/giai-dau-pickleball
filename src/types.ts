@@ -108,6 +108,7 @@ export interface Account {
   password: string;
   displayName: string;
   tournamentName: string;
+  session_id?: string;
 }
 
 

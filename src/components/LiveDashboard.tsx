@@ -31,6 +31,9 @@ function AutoScrollList({ children, className = '', maxHeight = '350px' }: AutoS
   useEffect(() => {
     const element = containerRef.current;
     if (!element) return;
+    
+    // Disable auto-scroll on mobile to allow native scrolling and full display
+    if (window.innerWidth < 1024) return;
 
     let timer: any;
     let scrollDirection = 1; // 1 for down, -1 for up
@@ -79,7 +82,7 @@ function AutoScrollList({ children, className = '', maxHeight = '350px' }: AutoS
     <div
       ref={containerRef}
       className={`overflow-y-auto pr-1 ${className}`}
-      style={{ maxHeight, scrollBehavior: 'auto' }}
+      style={{ maxHeight: window.innerWidth >= 1024 ? maxHeight : 'none', scrollBehavior: 'auto' }}
     >
       {children}
     </div>
@@ -587,12 +590,17 @@ export default function LiveDashboard() {
                               </h5>
                               <div className="space-y-1">
                                 {std.map((s, idx) => (
-                                  <div key={s.teamId} className="flex justify-between items-center bg-white dark:bg-zinc-950 px-2.5 py-1 rounded-lg border border-zinc-100 dark:border-zinc-850 text-[11px]">
-                                    <div className="flex items-center gap-2 truncate max-w-[70%]">
-                                      <span className="font-bold text-zinc-400 text-[10px] w-3">{idx + 1}</span>
-                                      <span className="font-extrabold text-zinc-700 dark:text-zinc-300 truncate" style={{ fontSize: '14px' }}>{s.teamName}</span>
+                                  <div key={s.teamId} className="flex justify-between items-center bg-white dark:bg-zinc-950 px-2.5 py-1.5 rounded-lg border border-zinc-100 dark:border-zinc-850 text-[11px]">
+                                    <div className="flex items-center gap-1.5 truncate max-w-[65%]">
+                                      <span className="font-bold text-zinc-400 text-[10px] w-3 shrink-0">{idx + 1}</span>
+                                      <span className="font-extrabold text-zinc-700 dark:text-zinc-300 truncate" style={{ fontSize: '13px' }}>{s.teamName}</span>
                                     </div>
-                                    <span className="font-extrabold text-blue-600 shrink-0">{s.points}đ</span>
+                                    <div className="flex gap-2 items-center text-right shrink-0">
+                                      <span className="text-[10px] text-zinc-400 font-medium">
+                                        HS: {s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff}
+                                      </span>
+                                      <span className="font-extrabold text-blue-600 w-5 text-right">{s.points}đ</span>
+                                    </div>
                                   </div>
                                 ))}
                               </div>

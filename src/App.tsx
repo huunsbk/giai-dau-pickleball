@@ -149,9 +149,41 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isAdmin, initSupabase]);
 
+  // Bảo mật phiên làm việc: Auto-Logout và xóa cache khi đóng trình duyệt
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    // Tự động đăng xuất sau 2 phút (120,000ms) không hoạt động
+    let inactivityTimer: number;
+
+    const resetTimer = () => {
+      window.clearTimeout(inactivityTimer);
+      inactivityTimer = window.setTimeout(() => {
+        console.warn('Phiên làm việc đã hết hạn do không hoạt động.');
+        useTournamentStore.getState().logout();
+      }, 120000);
+    };
+
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    events.forEach(evt => document.addEventListener(evt, resetTimer));
+    resetTimer(); // Bắt đầu đếm giờ ngay lập tức
+
+    // Xóa cache (phiên đăng nhập) khi người dùng đóng trình duyệt hoặc tab
+    const handleBeforeUnload = () => {
+      localStorage.removeItem('pickleball-tournament-cache');
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.clearTimeout(inactivityTimer);
+      events.forEach(evt => document.removeEventListener(evt, resetTimer));
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isAdmin]);
+
   const handleAdminAuth = () => {
     if (isAdmin) {
-      setAuthStatus('guest', null, 'default');
+      useTournamentStore.getState().logout();
     } else {
       setIsLoginOpen(true);
     }
