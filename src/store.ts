@@ -147,8 +147,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               name: g.name,
               team_ids: Array.isArray(g.teamIds) ? g.teamIds : [],
               event_id: evtId,
-              tenant_id: activeTenantId,
-              tournament_id: tournamentId
+              tenant_id: activeTenantId
             });
           });
         }
@@ -163,8 +162,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               group_id: t.groupId || null,
               seed: t.seed || 'none',
               event_id: evtId,
-              tenant_id: activeTenantId,
-              tournament_id: tournamentId
+              tenant_id: activeTenantId
             });
           });
         }
@@ -188,8 +186,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               next_match_id: m.nextMatchId || null,
               next_match_slot: m.nextMatchSlot || null,
               event_id: evtId,
-              tenant_id: activeTenantId,
-              tournament_id: tournamentId
+              tenant_id: activeTenantId
             });
           });
         }
@@ -360,8 +357,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
             active_group_id: evt.activeGroupId || null,
             advance_selection_mode: evt.advanceSelectionMode || 'auto',
             manual_qualified_team_ids: evt.manualQualifiedTeamIds || [],
-            tenant_id: activeTenantId,
-            tournament_id: tournamentId
+            tenant_id: activeTenantId
           });
           if (eErr) {
             console.error(`Lỗi tại bước 2 (events) - ID ${evt.id}:`, eErr.message, eErr.details);
@@ -1911,8 +1907,7 @@ export const useTournamentStore = create<AppState>()(
                 active_group_id: null,
                 advance_selection_mode: 'auto',
                 manual_qualified_team_ids: [],
-                tenant_id: activeTenantId,
-                tournament_id: dbTournament?.id || 't-1'
+                tenant_id: activeTenantId
               };
               if (localState.userRole === 'admin1' || localState.userRole === 'admin2') {
                 await supabase.from('events').insert([defaultEvt]);

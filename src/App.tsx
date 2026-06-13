@@ -68,9 +68,9 @@ export default function App() {
       await setTenantId(newId);
       const slugId = newId.replace(/_/g, '-');
       if (newId !== 'default') {
-        window.location.href = `/#/${slugId}`;
+        window.location.hash = `/${slugId}`;
       } else {
-        window.location.href = '/#/';
+        window.location.hash = '/';
       }
       setTimeout(() => {
         window.location.reload();
