@@ -584,25 +584,57 @@ export default function LiveDashboard() {
                         {evtGroups.map((group) => {
                           const std = stdByGrp[group.id] || [];
                           return (
-                            <div key={group.id} className="space-y-1.5">
-                              <h5 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-wide" style={{ fontSize: '13px' }}>
-                                ● {group.name}
-                              </h5>
-                              <div className="space-y-1">
-                                {std.map((s, idx) => (
-                                  <div key={s.teamId} className="flex justify-between items-center bg-white dark:bg-zinc-950 px-2.5 py-1.5 rounded-lg border border-zinc-100 dark:border-zinc-850 text-[11px]">
-                                    <div className="flex items-center gap-1.5 truncate max-w-[65%]">
-                                      <span className="font-bold text-zinc-400 text-[10px] w-3 shrink-0">{idx + 1}</span>
-                                      <span className="font-extrabold text-zinc-700 dark:text-zinc-300 truncate" style={{ fontSize: '13px' }}>{s.teamName}</span>
-                                    </div>
-                                    <div className="flex gap-2 items-center text-right shrink-0">
-                                      <span className="text-[10px] text-zinc-400 font-medium">
-                                        HS: {s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff}
-                                      </span>
-                                      <span className="font-extrabold text-blue-600 w-5 text-right">{s.points}đ</span>
-                                    </div>
-                                  </div>
-                                ))}
+                            <div key={group.id} className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-805 overflow-hidden shadow-sm mb-4">
+                              {/* Header Bar */}
+                              <div className="bg-blue-600 text-white py-2 px-3 flex items-center justify-between">
+                                <span className="text-[11px] font-extrabold flex items-center gap-1.5 tracking-tight uppercase">
+                                  <Award size={13} /> BẢNG XẾP HẠNG - {group.name}
+                                </span>
+                                <span className="text-[9px] font-bold bg-white/20 px-2 py-0.5 rounded-full border border-white/20 select-none hidden sm:inline-block">
+                                  Bảng {group.teamIds?.length || std.length} đội
+                                </span>
+                              </div>
+                              {/* Table Data */}
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-left text-[11px]">
+                                  <thead>
+                                    <tr className="bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 font-bold text-[10px] md:text-[11px]">
+                                      <th className="py-2 px-2 text-center w-8">Hạng</th>
+                                      <th className="py-2 px-2 text-left min-w-[90px]">Đội tuyển</th>
+                                      <th className="py-2 px-1.5 text-center">Trận</th>
+                                      <th className="py-2 px-1.5 text-center text-emerald-600">T</th>
+                                      <th className="py-2 px-1.5 text-center text-red-500">B</th>
+                                      <th className="py-2 px-1.5 text-center text-zinc-500">H/S</th>
+                                      <th className="py-2 px-2 text-center text-blue-600">Điểm</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {std.map((s, idx) => {
+                                      let rankBadge = null;
+                                      if (idx === 0) {
+                                        rankBadge = <span className="w-5 h-5 rounded-full inline-flex items-center justify-center font-bold text-[10px] bg-amber-100 text-amber-800 border border-amber-200/40">1</span>;
+                                      } else if (idx === 1) {
+                                        rankBadge = <span className="w-5 h-5 rounded-full inline-flex items-center justify-center font-bold text-[10px] bg-zinc-150 text-zinc-700 border border-zinc-200/40">2</span>;
+                                      } else {
+                                        rankBadge = <span className="text-zinc-400 font-bold block">{idx + 1}</span>;
+                                      }
+
+                                      return (
+                                        <tr key={s.teamId} className="border-b border-zinc-100 dark:border-zinc-850/60 hover:bg-zinc-50 dark:hover:bg-zinc-850/10">
+                                          <td className="py-2 px-2 text-center font-bold text-[11px]">
+                                            <span className="flex justify-center items-center">{rankBadge}</span>
+                                          </td>
+                                          <td className="py-2 px-2 font-extrabold text-zinc-700 dark:text-zinc-300 truncate max-w-[130px] text-[12px]">{s.teamName}</td>
+                                          <td className="py-2 px-1.5 text-center text-zinc-600 dark:text-zinc-400 font-medium">{s.matchesPlayed}</td>
+                                          <td className="py-2 px-1.5 text-center text-emerald-600 font-bold">{s.matchesWon}</td>
+                                          <td className="py-2 px-1.5 text-center text-red-500 font-bold">{s.matchesLost}</td>
+                                          <td className="py-2 px-1.5 text-center text-zinc-500 font-medium">{s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff === 0 ? 'Ø' : s.pointDiff}</td>
+                                          <td className="py-2 px-2 text-center font-extrabold text-blue-600 text-[13px]">{s.points}</td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
                               </div>
                             </div>
                           );
@@ -754,29 +786,57 @@ export default function LiveDashboard() {
                           {evtGroups.map((group) => {
                             const std = stdByGrp[group.id] || [];
                             return (
-                              <div key={group.id} className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 space-y-4">
-                                <h4 className="text-sm font-black text-blue-600 dark:text-blue-400 border-b pb-2.5 border-zinc-200 dark:border-zinc-800 border-dashed uppercase tracking-wider select-none">
-                                  ● {group.name.toUpperCase()}
-                                </h4>
+                              <div key={group.id} className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+                                <div className="bg-blue-600 text-white p-4 flex items-center justify-between">
+                                  <span className="text-sm font-extrabold flex items-center gap-2 tracking-tight uppercase">
+                                    <Award size={17} />
+                                    Bảng xếp hạng hiện tại - {group.name}
+                                  </span>
+                                  <span className="text-[10px] font-bold bg-white/20 px-2.5 py-1 rounded-full border border-white/20 select-none hidden sm:inline-block">
+                                    Bảng {group.teamIds?.length || std.length} đội
+                                  </span>
+                                </div>
 
-                                <div className="space-y-3">
-                                  {std.map((s, index) => (
-                                    <div key={s.teamId} className="flex justify-between items-center bg-zinc-50 dark:bg-zinc-950 p-3 rounded-2xl border border-zinc-100 dark:border-zinc-850">
-                                      <div className="flex items-center gap-3 truncate max-w-[70%]">
-                                        <span className={`h-6 w-6 font-bold text-xs flex items-center justify-center rounded-lg ${index === 0 ? 'bg-amber-100 text-amber-800' : 'bg-zinc-100 text-zinc-400'}`}>
-                                          {index + 1}
-                                        </span>
-                                        <span className="font-extrabold text-xs text-zinc-800 dark:text-zinc-200 truncate">
-                                          {s.teamName}
-                                        </span>
-                                      </div>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-left text-xs min-w-[400px]">
+                                    <thead>
+                                      <tr className="bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 font-bold">
+                                        <th className="py-3 px-3 text-center w-12">Hạng</th>
+                                        <th className="py-3 px-3 text-left">Đội tuyển</th>
+                                        <th className="py-3 px-2.5 text-center">Trận</th>
+                                        <th className="py-3 px-2.5 text-center text-emerald-600">T</th>
+                                        <th className="py-3 px-2.5 text-center text-red-500">B</th>
+                                        <th className="py-3 px-2.5 text-center text-zinc-500">H/S</th>
+                                        <th className="py-3 px-3 text-center text-blue-600">Điểm</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {std.map((s, index) => {
+                                        let rankBadge = null;
+                                        if (index === 0) {
+                                          rankBadge = <span className="w-6 h-6 rounded-full inline-flex items-center justify-center font-bold text-xs bg-amber-100 text-amber-800 border border-amber-200/40">1</span>;
+                                        } else if (index === 1) {
+                                          rankBadge = <span className="w-6 h-6 rounded-full inline-flex items-center justify-center font-bold text-xs bg-zinc-150 text-zinc-700 border border-zinc-200/40">2</span>;
+                                        } else {
+                                          rankBadge = <span className="text-zinc-400 font-bold w-6 text-center block">{index + 1}</span>;
+                                        }
 
-                                      <div className="flex items-center gap-4 text-xs shrink-0">
-                                        <span className="text-zinc-400 font-semibold">{s.matchesPlayed} Trận</span>
-                                        <span className="font-extrabold text-blue-600">{s.points} Điểm</span>
-                                      </div>
-                                    </div>
-                                  ))}
+                                        return (
+                                          <tr key={s.teamId} className="border-b border-zinc-100 dark:border-zinc-850/60 hover:bg-zinc-50/50 dark:hover:bg-zinc-850/10 transition-colors">
+                                            <td className="py-3.5 px-3 text-center font-bold">
+                                              <span className="flex justify-center items-center">{rankBadge}</span>
+                                            </td>
+                                            <td className="py-3.5 px-3 font-extrabold text-zinc-700 dark:text-zinc-300 text-sm truncate max-w-[150px]">{s.teamName}</td>
+                                            <td className="py-3.5 px-2.5 text-center text-zinc-600 dark:text-zinc-400 font-medium">{s.matchesPlayed}</td>
+                                            <td className="py-3.5 px-2.5 text-center text-emerald-600 font-bold">{s.matchesWon}</td>
+                                            <td className="py-3.5 px-2.5 text-center text-red-500 font-bold">{s.matchesLost}</td>
+                                            <td className="py-3.5 px-2.5 text-center text-zinc-500 font-medium">{s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff === 0 ? 'Ø' : s.pointDiff}</td>
+                                            <td className="py-3.5 px-3 text-center font-black text-blue-600 text-base">{s.points}</td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
                                 </div>
                               </div>
                             );
