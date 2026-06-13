@@ -65,26 +65,34 @@ export default function App() {
   const handleDbChange = async (newId: string) => {
     setIsDbChanging(true);
     try {
-      await setTenantId(newId);
+      const slugId = newId.replace(/_/g, '-');
+      if (newId !== 'default') {
+        window.location.href = `/#/${slugId}`;
+      } else {
+        window.location.href = '/#/';
+      }
+      // Force a full reload to completely wipe memory and prevent cross-tenant bleeding
+      window.location.reload();
     } catch (e) {
       console.error("Lỗi khi chuyển đổi CSDL:", e);
-    } finally {
       setIsDbChanging(false);
     }
   };
 
   // Khởi tạo & đồng bộ dữ liệu từ Supabase trực tuyến khi khởi chạy ứng dụng
   // tích hợp tự động nhận diện phân rã dữ liệu (Tenant ID) qua tham số Đường dẫn / Query / Hash trên URL
+  const initializedRef = React.useRef(false);
+
   useEffect(() => {
+    if (initializedRef.current) return;
+
     const detectTenantFromUrl = () => {
-      // 1. Quét tìm trong Query Parameters (?g=clb-ngan-son, ?tenant=..., ?id=...)
       const searchParams = new URLSearchParams(window.location.search);
       const qTenant = searchParams.get('g') || searchParams.get('tenant') || searchParams.get('id');
       if (qTenant) {
         return qTenant.trim().toLowerCase();
       }
 
-      // 2. Quét tìm trong Hash (#/clb-ngan-son hoặc #clb-ngan-son)
       const hash = window.location.hash;
       if (hash) {
         const cleanHash = hash.replace(/^#\/?/, '').trim();
@@ -93,7 +101,6 @@ export default function App() {
         }
       }
 
-      // 3. Quét tìm qua các thành phần Thư Mục (Path Segment) cuối cùng
       const pathname = window.location.pathname;
       const segments = pathname.split('/').filter(Boolean);
       if (segments.length > 0) {
@@ -115,7 +122,7 @@ export default function App() {
 
     const processUrlTenant = async () => {
       const detected = detectTenantFromUrl();
-      const normalizedTenant = detected.replace(/-/g, '_'); // Hỗ trợ chuyển đổi gạch ngang thành gạch dưới để khớp tên db
+      const normalizedTenant = detected.replace(/-/g, '_'); 
       
       if (normalizedTenant !== 'default' && normalizedTenant !== activeTenantId) {
         console.log(`[URL] Phát hiện phân rã CSDL: ${normalizedTenant}. Đang chuyển cấu hình...`);
@@ -123,6 +130,7 @@ export default function App() {
       } else {
         await initSupabase();
       }
+      initializedRef.current = true;
     };
 
     processUrlTenant();

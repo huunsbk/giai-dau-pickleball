@@ -90,7 +90,7 @@ export default function AccountManager() {
     setIsSyncing(false);
     if (success) {
       const slugUser = trimmedUsername.replace(/_/g, '-');
-      setSuccessMsg(`Đã tạo thành công tài khoản cấp 2 cho đơn vị "${trimmedDisplay}". Đường dẫn xem giải: https://huunsbk.github.io/PIC_HUU/${slugUser}`);
+      setSuccessMsg(`Đã tạo thành công tài khoản cấp 2 cho đơn vị "${trimmedDisplay}". Đường dẫn xem giải: https://huunsbk.github.io/PIC_HUU/#/${slugUser}`);
       setUsername('');
       setPassword('');
       setDisplayName('');
@@ -338,8 +338,8 @@ export default function AccountManager() {
                     // Chuẩn hóa thành dạng slug URL bằng cách đổi dấu gạch dưới thành gạch ngang
                     const slugUser = acc.username.toLowerCase().replace(/_/g, '-');
                     
-                    // URL GitHub Pages được yêu cầu
-                    const ghPagesUrl = `https://huunsbk.github.io/PIC_HUU/${slugUser}`;
+                    // URL GitHub Pages được yêu cầu (Hash Router hỗ trợ 100% không lo lỗi 404 tĩnh)
+                    const ghPagesUrl = `https://huunsbk.github.io/PIC_HUU/#/${slugUser}`;
                     
                     // URL live preview hiện tại sử dụng phân vùng qua hash
                     const origin = typeof window !== 'undefined' ? window.location.origin : '';
