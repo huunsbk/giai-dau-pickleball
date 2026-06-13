@@ -22,6 +22,29 @@
   }
 }
 
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE 11 */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Custom slim scrollbar for Live Dashboard truncated names */
+.scrollbar-thin::-webkit-scrollbar {
+  height: 4px; /* Thin horizontal scrollbar */
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* zinc-300 */
+  border-radius: 4px;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #3f3f46; /* zinc-700 */
+}
+
 body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }

@@ -680,12 +680,16 @@ export default function LiveDashboard() {
                                 return (
                                   <div key={m.id} className={`flex items-center gap-2 bg-white dark:bg-zinc-950 py-1.5 px-2 rounded-lg border-[1.5px] ${roundClass} text-[11px]`}>
                                     <div className="w-6 h-6 rounded-full bg-[#114666] text-white flex items-center justify-center font-bold shrink-0 shadow-sm border border-[#0d344d]">
-                                      {idx + 1}
+                                      {evtMatches.filter(x => x.groupId === m.groupId && x.round === m.round).findIndex(x => x.id === m.id) + 1}
                                     </div>
                                     <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
-                                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate" style={{ fontSize: '13px' }}>{teamA}</span>
-                                      <div className="w-0.5 h-2.5 bg-orange-400 mx-2 my-0.5"></div>
-                                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate" style={{ fontSize: '13px' }}>{teamB}</span>
+                                      <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700">
+                                        <span className="font-semibold text-zinc-800 dark:text-zinc-200" style={{ fontSize: '13px' }}>{teamA}</span>
+                                      </div>
+                                      <div className="w-0.5 h-2.5 bg-orange-400 mx-2 my-0.5 shrink-0"></div>
+                                      <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700">
+                                        <span className="font-semibold text-zinc-800 dark:text-zinc-200" style={{ fontSize: '13px' }}>{teamB}</span>
+                                      </div>
                                     </div>
                                     <div className="flex flex-col items-end shrink-0">
                                       <span className="text-[7.5px] font-bold text-zinc-500 uppercase pb-0.5">{roundLabel}</span>
@@ -706,9 +710,13 @@ export default function LiveDashboard() {
                                 return (
                                   <div key={m.id} className="flex justify-between items-center bg-emerald-500/[0.02] py-1.5 px-3 rounded-lg border border-emerald-100/55 dark:border-emerald-900/10 text-[11px]">
                                     <div className="flex flex-col flex-1 pr-2 overflow-hidden">
-                                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate" style={{ fontSize: '13px' }}>{teamA}</span>
+                                      <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
+                                        <span className="font-semibold text-zinc-800 dark:text-zinc-200" style={{ fontSize: '13px' }}>{teamA}</span>
+                                      </div>
                                       <div className="w-0.5 h-2.5 bg-orange-400 mx-2 my-0.5"></div>
-                                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate" style={{ fontSize: '13px' }}>{teamB}</span>
+                                      <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
+                                        <span className="font-semibold text-zinc-800 dark:text-zinc-200" style={{ fontSize: '13px' }}>{teamB}</span>
+                                      </div>
                                     </div>
                                     <strong className="font-mono font-black text-emerald-600 text-[13px] leading-none bg-emerald-50 dark:bg-emerald-950 px-2.5 py-1.5 rounded shrink-0">{m.scoreA} - {m.scoreB}</strong>
                                   </div>
@@ -914,12 +922,16 @@ export default function LiveDashboard() {
                               return (
                                 <div key={m.id} className={`flex items-center gap-3 bg-white dark:bg-zinc-950 py-2.5 px-3.5 rounded-xl border-[1.5px] ${roundClass} shadow-sm hover:opacity-90 transition-opacity`}>
                                   <div className="w-9 h-9 rounded-full bg-[#114666] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm border border-[#0d344d]">
-                                    {idx + 1}
+                                    {evtMatches.filter(x => x.groupId === m.groupId && x.round === m.round).findIndex(x => x.id === m.id) + 1}
                                   </div>
                                   <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
-                                    <span className="font-bold text-zinc-850 dark:text-zinc-100 truncate text-[14px]">{teamAName}</span>
-                                    <div className="w-0.5 h-3.5 bg-orange-400 mx-2 my-1"></div>
-                                    <span className="font-bold text-zinc-850 dark:text-zinc-100 truncate text-[14px]">{teamBName}</span>
+                                    <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
+                                      <span className="font-bold text-zinc-850 dark:text-zinc-100 text-[14px]">{teamAName}</span>
+                                    </div>
+                                    <div className="w-0.5 h-3.5 bg-orange-400 mx-2 my-1 shrink-0"></div>
+                                    <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
+                                      <span className="font-bold text-zinc-850 dark:text-zinc-100 text-[14px]">{teamBName}</span>
+                                    </div>
                                   </div>
                                   <div className="flex flex-col items-end shrink-0 pl-2">
                                     <span className="text-[10px] font-bold text-zinc-500 uppercase pb-1.5">{roundLabel}</span>
@@ -953,13 +965,17 @@ export default function LiveDashboard() {
                                 <div key={m.id} className="py-1.5 px-3.5 bg-emerald-550/[0.01] rounded-lg border border-emerald-100 dark:border-emerald-900/10 flex items-center justify-between shadow-xs">
                                   <div className="space-y-1 max-w-[70%] flex-1 pr-2">
                                     <div className="flex flex-col">
-                                      <p className="text-[13.5px] font-bold text-zinc-850 dark:text-zinc-100 truncate">
-                                        {teamAName}
-                                      </p>
+                                      <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
+                                        <span className="text-[13.5px] font-bold text-zinc-850 dark:text-zinc-100">
+                                          {teamAName}
+                                        </span>
+                                      </div>
                                       <div className="w-0.5 h-3 bg-orange-400 mx-2 my-0.5"></div>
-                                      <p className="text-[13.5px] font-bold text-zinc-850 dark:text-zinc-100 truncate">
-                                        {teamBName}
-                                      </p>
+                                      <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
+                                        <span className="text-[13.5px] font-bold text-zinc-850 dark:text-zinc-100">
+                                          {teamBName}
+                                        </span>
+                                      </div>
                                     </div>
                                     <span className="inline-block py-0.5 px-1.5 bg-emerald-50 text-emerald-805 dark:bg-emerald-950/20 dark:text-emerald-350 font-bold rounded text-[9.5px]">
                                       {group ? group.name : 'Knockout'} - Vòng {m.round}

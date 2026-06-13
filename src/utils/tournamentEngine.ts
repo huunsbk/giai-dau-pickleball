@@ -805,16 +805,45 @@ export function getReadableTeamName(teamName: string): string {
   if (nameUpper === 'THẮNG TỨ KẾT 3' || nameUpper === 'THANG TU KET 3') return 'W-QF3 (Thắng Tứ Kết 3)';
   if (nameUpper === 'THẮNG TỨ KẾT 4' || nameUpper === 'THANG TU KET 4') return 'W-QF4 (Thắng Tứ Kết 4)';
 
-  const r16WinnerMatch = nameUpper.match(/THẮNG VÒNG 16 \(TRẬN (\d+)\)/) || nameUpper.match(/THANG VONG 16 \(TRAN (\d+)\)/) || teamName.match(/Thắng Vòng 1\/8 \(Trận (\d+)\)/i) || teamName.match(/Thắng Vòng 16 \(Trận (\d+)\)/i);
+                                const r16WinnerMatch = nameUpper.match(/THẮNG VÒNG 16 \(TRẬN (\d+)\)/) || nameUpper.match(/THANG VONG 16 \(TRAN (\d+)\)/) || teamName.match(/Thắng Vòng 1\/8 \(Trận (\d+)\)/i) || teamName.match(/Thắng Vòng 16 \(Trận (\d+)\)/i);
   if (r16WinnerMatch) {
     const num = r16WinnerMatch[1];
-    return `W-R16-${num} (Thắng Vòng 1/8 Trận ${num})`;
+    return `W16 (Trận ${num})`;
   }
 
   const r32WinnerMatch = nameUpper.match(/THẮNG VÒNG 32 \(TRẬN (\d+)\)/) || nameUpper.match(/THANG VONG 32 \(TRAN (\d+)\)/) || teamName.match(/Thắng Vòng 32 \(Trận (\d+)\)/i);
   if (r32WinnerMatch) {
     const num = r32WinnerMatch[1];
-    return `W-R32-${num} (Thắng Vòng 1/16 Trận ${num})`;
+    return `W32 (Trận ${num})`;
+  }
+
+  const qfWinnerMatch = nameUpper.match(/THẮNG TỨ KẾT (\d+)/) || nameUpper.match(/THANG TU KET (\d+)/) || teamName.match(/Thắng Tứ Kết (\d+)/i) || nameUpper.match(/W-QF(\d+)/) || nameUpper.match(/W_QF(\d+)/);
+  if (qfWinnerMatch) {
+     const num = qfWinnerMatch[1];
+     return `W Tứ Kết (Trận ${num})`;
+  }
+
+  const sfWinnerMatch = nameUpper.match(/THẮNG BÁN KẾT (\d+)/) || nameUpper.match(/THANG BAN KET (\d+)/) || teamName.match(/Thắng Bán Kết (\d+)/i) || nameUpper.match(/W-SF(\d+)/) || nameUpper.match(/W_SF(\d+)/);
+  if (sfWinnerMatch) {
+     const num = sfWinnerMatch[1];
+     return `W Bán Kết (Trận ${num})`;
+  }
+
+  const sfLoserMatch = nameUpper.match(/THUA BÁN KẾT (\d+)/) || nameUpper.match(/THUA BAN KET (\d+)/) || teamName.match(/Thua Bán Kết (\d+)/i) || nameUpper.match(/L-SF(\d+)/) || nameUpper.match(/L_SF(\d+)/);
+  if (sfLoserMatch) {
+     const num = sfLoserMatch[1];
+     return `L Bán Kết (Trận ${num})`;
+  }
+
+  // Handle placeholders like Nhất Bảng A, Nhì Bảng B
+  if (nameUpper.startsWith('NHẤT BẢNG ')) {
+      return teamName;
+  }
+  if (nameUpper.startsWith('NHÌ BẢNG ')) {
+      return teamName;
+  }
+  if (nameUpper.startsWith('BA BẢNG ')) {
+      return teamName;
   }
 
   return teamName;
