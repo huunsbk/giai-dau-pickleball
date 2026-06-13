@@ -4,7 +4,7 @@ import { useTournamentStore } from '../store';
 import { getReadableTeamName, balanceMatchesRestTime } from '../utils/tournamentEngine';
 
 export default function ScoreEntry() {
-  const { events, updateMatchScore, updateMatchStatus, activeEventId, setActiveEventId } = useTournamentStore();
+  const { events, updateMatchScore, updateMatchStatus, currentEventId, setCurrentEvent } = useTournamentStore();
 
   const [localScores, setLocalScores] = useState<Record<string, { a: string, b: string }>>({});
 
@@ -14,8 +14,8 @@ export default function ScoreEntry() {
     return <div className="text-center py-20 text-zinc-500 font-bold bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">Chưa có nội dung thi đấu nào. Vui lòng tạo nội dung trước.</div>;
   }
 
-  // Safe checks for activeEventId
-  const currentEvt = activeEventId && events[activeEventId] ? events[activeEventId] : eventList[0];
+  // Safe checks for currentEventId
+  const currentEvt = currentEventId && events[currentEventId] ? events[currentEventId] : eventList[0];
   
   if (!currentEvt.matches || currentEvt.matches.length === 0) {
      return (
@@ -24,7 +24,7 @@ export default function ScoreEntry() {
             {eventList.map(evt => (
               <button
                 key={evt.id}
-                onClick={() => setActiveEventId(evt.id)}
+                onClick={() => setCurrentEvent(evt.id)}
                 className={`px-5 py-2.5 rounded-xl font-black text-sm transition-all focus:outline-none ${
                     currentEvt.id === evt.id
                     ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm border border-zinc-200 dark:border-zinc-700'
@@ -79,14 +79,14 @@ export default function ScoreEntry() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 bg-zinc-100 dark:bg-zinc-900 p-2 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 overflow-x-auto whitespace-nowrap hide-scrollbar">
+      <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 overflow-x-auto whitespace-nowrap hide-scrollbar">
         {eventList.map(evt => (
             <button
             key={evt.id}
-            onClick={() => setActiveEventId(evt.id)}
+            onClick={() => setCurrentEvent(evt.id)}
             className={`px-5 py-2.5 rounded-xl font-black text-sm transition-all focus:outline-none ${
                 currentEvt.id === evt.id
-                ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm border border-zinc-200 dark:border-zinc-700'
+                ? 'bg-zinc-100 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm border border-zinc-200 dark:border-zinc-700'
                 : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 border border-transparent'
             }`}
             >
@@ -97,12 +97,12 @@ export default function ScoreEntry() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Left Panel: Lịch thi đấu cập nhật mới nhất (đang chờ và tiến độ) */}
-        <div className="lg:col-span-1 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col h-[75vh]">
-            <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 text-sm font-extrabold flex items-center gap-2 tracking-tight uppercase bg-zinc-50 dark:bg-zinc-950">
+        <div className="lg:col-span-1 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col h-[600px]">
+            <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 text-[16px] font-extrabold flex items-center gap-2 tracking-tight uppercase bg-zinc-50 dark:bg-zinc-950">
                <Clock size={16} /> LỊCH ĐẤU & ĐIỂM SỐ MỚI NHẤT
             </div>
             
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            <div className="flex-1 overflow-y-auto p-3 space-y-2 h-[500px]">
                 {evtMatches.map((m, idx) => {
                     const teamA = currentEvt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
                     const teamB = currentEvt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
@@ -155,7 +155,7 @@ export default function ScoreEntry() {
                     }
 
                     return (
-                        <div key={m.id} className={`flex p-2.5 rounded-xl border-[1.5px] items-stretch gap-2 transition-colors ${wrapperClass}`}>
+                        <div key={m.id} className={`flex pl-[10px] py-0 rounded-xl border-[1.5px] items-stretch gap-2 transition-colors ${wrapperClass}`}>
                            <div className={`w-8 h-8 rounded flex items-center justify-center font-black text-sm shrink-0 self-center shadow-xs border ${
                                isFinished ? 'bg-emerald-600 text-white border-emerald-700' :
                                isPlaying ? 'bg-blue-600 text-white border-blue-700' : 'bg-[#114666] text-white border-[#0d344d]'
@@ -211,30 +211,39 @@ export default function ScoreEntry() {
                        const scores = localScores[m.id] || { a: '', b: '' };
 
                        return (
-                           <div key={m.id} className="relative bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-blue-200 dark:border-blue-900 shadow-sm hover:shadow-md transition-shadow">
+                           <div key={m.id} className="relative bg-white dark:bg-zinc-900 py-[5px] px-4 w-[627px] h-[76.6px] mx-auto border rounded-[1.5rem] border-blue-200 dark:border-blue-900 shadow-sm hover:shadow-md transition-shadow">
                                 <div className="absolute top-0 inset-x-0 -mt-3.5 flex justify-center">
                                     <span className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 border border-blue-200 dark:border-blue-800 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xs">
                                         {roundLabel}
                                     </span>
                                 </div>
+                                
+                                <button
+                                    onClick={() => saveScore(m.id)}
+                                    className="absolute left-5 top-1/2 -translate-y-1/2 p-3.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white dark:bg-emerald-900/30 dark:hover:bg-emerald-600 dark:text-emerald-500 dark:hover:text-white rounded-2xl transition-all cursor-pointer shadow-sm"
+                                    title="Hoàn Thành"
+                                >
+                                    <CheckSquare size={24} />
+                                </button>
+
                                 <button
                                     onClick={() => handleCancelPlaying(m.id)}
-                                    className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-xl transition-all cursor-pointer"
+                                    className="absolute right-5 top-1/2 -translate-y-1/2 p-3.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-2xl transition-all cursor-pointer"
                                     title="Hủy đang diễn ra"
                                 >
-                                    <X size={18} />
+                                    <X size={24} />
                                 </button>
                                 
-                                <div className="flex items-center justify-between gap-6 mt-4 flex-wrap sm:flex-nowrap">
+                                <div className="flex items-center justify-center gap-6 mt-2 flex-wrap sm:flex-nowrap w-full">
                                     {/* Team A */}
-                                    <div className="flex-1 flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-                                        <div className="text-xl font-extrabold text-zinc-800 dark:text-zinc-100 text-center sm:text-right w-full shrink-0 truncate px-2">{teamA}</div>
+                                    <div className="flex flex-col sm:flex-row items-center gap-4 w-[240px] justify-end">
+                                        <div className="text-[17px] font-extrabold text-zinc-800 dark:text-zinc-100 text-right w-[180px] shrink-0 truncate">{teamA}</div>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             value={scores.a}
                                             onChange={(e) => handleScoreChange(m.id, 'a', e.target.value)}
-                                            className="w-20 h-20 text-center text-4xl font-black bg-blue-50/50 dark:bg-zinc-950 border-[2px] border-blue-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 rounded-2xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all font-mono"
+                                            className="w-[50px] h-[50px] text-center text-3xl font-black bg-blue-50/50 dark:bg-zinc-950 border-[2px] border-blue-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 rounded-2xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all font-mono"
                                         />
                                     </div>
 
@@ -242,27 +251,18 @@ export default function ScoreEntry() {
                                     <div className="hidden sm:flex text-zinc-300 dark:text-zinc-700 font-black text-3xl">-</div>
 
                                     {/* Team B */}
-                                    <div className="flex-1 flex flex-col sm:flex-row-reverse items-center gap-3 w-full sm:w-auto">
-                                        <div className="text-xl font-extrabold text-zinc-800 dark:text-zinc-100 text-center sm:text-left w-full shrink-0 truncate px-2">{teamB}</div>
+                                    <div className="flex flex-col sm:flex-row items-center gap-4 w-[240px] justify-start">
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             value={scores.b}
                                             onChange={(e) => handleScoreChange(m.id, 'b', e.target.value)}
-                                            className="w-20 h-20 text-center text-4xl font-black bg-blue-50/50 dark:bg-zinc-950 border-[2px] border-blue-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 rounded-2xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all font-mono"
+                                            className="w-[50px] h-[50px] text-center text-3xl font-black bg-blue-50/50 dark:bg-zinc-950 border-[2px] border-blue-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 rounded-2xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all font-mono"
                                         />
+                                        <div className="text-[17px] font-extrabold text-zinc-800 dark:text-zinc-100 text-left w-[180px] shrink-0 truncate">{teamB}</div>
                                     </div>
                                 </div>
-
-                                <div className="mt-8 flex justify-center">
-                                    <button
-                                        onClick={() => saveScore(m.id)}
-                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm px-8 py-3.5 rounded-xl uppercase tracking-wider flex items-center gap-2 shadow-sm border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 transition-all cursor-pointer"
-                                    >
-                                        <CheckSquare size={18} /> Hoàn Thành
-                                    </button>
-                                </div>
-                           </div>
+                            </div>
                        );
                    })}
                </div>

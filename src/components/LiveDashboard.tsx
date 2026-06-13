@@ -489,24 +489,6 @@ export default function LiveDashboard() {
         </div>
       </div>
 
-      {/* Header trình chiếu (Có Đồng hồ báo giờ thi đấu) */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-blue-700 via-indigo-800 to-indigo-950 p-6 rounded-2xl text-white shadow-lg">
-        <div className="space-y-1">
-          <span className="text-[10px] bg-white/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-widest text-indigo-200">
-            Bảng Điện Tử Trình Chiếu Toàn Giải
-          </span>
-          <h2 className="text-xl font-black tracking-tight">{tournament.name.toUpperCase()}</h2>
-          <p className="text-xs text-blue-100 font-medium">BTC: {tournament.organization} | Sân: {tournament.location}</p>
-        </div>
-
-        <div className="flex items-center gap-2.5 bg-black/20 px-5 py-3 rounded-2xl border border-white/15 shrink-0">
-          <Clock size={20} className="animate-spin duration-3000 text-blue-200" />
-          <span className="font-mono text-xl font-black tracking-wider w-24 text-center">
-            {currentTime || '09:40:00'}
-          </span>
-        </div>
-      </div>
-
       {/* HIỂN THỊ TẨT CẢ NỘI DUNG (Sticked Grid View) */}
       {selectedEventFilter === 'all' ? (
         <div className="space-y-8" id="tv-all-events-view">

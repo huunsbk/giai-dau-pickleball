@@ -386,7 +386,7 @@ export default function App() {
 
           {/* Outer Wrapper cho màn hình chính - Mở rộng toàn bộ chiều rộng (Full Width) */}
           <main className="flex-1 p-4 lg:p-6 w-full print:p-0 print:w-full" id="main-content-panel">
-            {selectedTab !== 'live' && selectedTab !== 'logs' && selectedTab !== 'export' && selectedTab !== 'accounts' && <EventBar />}
+            {selectedTab !== 'live' && selectedTab !== 'logs' && selectedTab !== 'export' && selectedTab !== 'accounts' && selectedTab !== 'scoreEntry' && <EventBar />}
             
             <div className="animate-fade-in">
               {selectedTab === 'dashboard' && <Dashboard />}
