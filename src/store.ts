@@ -46,7 +46,7 @@ interface AppState {
   
   // Event actions
   addEvent: (name: string) => void;
-  deleteEvent: (id: string) => void;
+  deleteEvent: (id: string) => Promise<void>;
   renameEvent: (id: string, newName: string) => void;
   setCurrentEvent: (id: string) => void;
   
@@ -762,11 +762,22 @@ export const useTournamentStore = create<AppState>()(
           logToStore('Nội Dung', `Thêm nội dung thi đấu mới: "${trimmedName}"`);
         },
 
-        deleteEvent: (id) => {
+        deleteEvent: async (id) => {
           if (!get().isAdmin) return;
           const event = get().events[id];
           if (!event) return;
 
+          // 1. Xóa trên Supabase trước (theo thứ tự FK)
+          try {
+            await supabase.from('matches').delete().eq('event_id', id);
+            await supabase.from('teams').delete().eq('event_id', id);
+            await supabase.from('groups').delete().eq('event_id', id);
+            await supabase.from('events').delete().eq('id', id);
+          } catch (err) {
+            console.error("Lỗi xóa dữ liệu liên quan trên Supabase:", err);
+          }
+
+          // 2. Cập nhật State Zustand
           set((state) => {
             const nextEvents = { ...state.events };
             delete nextEvents[id];
@@ -777,15 +788,19 @@ export const useTournamentStore = create<AppState>()(
               nextActiveId = keys.length > 0 ? keys[0] : '';
             }
             
-            const isLast = Object.keys(nextEvents).length === 0;
-            
+            // Cập nhật lại state với event mới
+            const activeEvent = nextEvents[nextActiveId];
             return {
               events: nextEvents,
               currentEventId: nextActiveId,
-              ...(isLast ? { teams: {}, groups: {}, matches: [], activeGroupId: null } : {})
+              teams: activeEvent?.teams || {},
+              groups: activeEvent?.groups || {},
+              matches: activeEvent?.matches || [],
+              activeGroupId: activeEvent?.activeGroupId || null
             };
           });
-          logToStore('Nội Dung', `Xóa nội dung thi đấu: "${event.name}"`);
+          
+          logToStore('Nội Dung', `Xóa vĩnh viễn nội dung: "${event.name}" và toàn bộ dữ liệu liên quan.`);
         },
 
         renameEvent: (id, newName) => {
