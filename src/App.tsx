@@ -65,6 +65,7 @@ export default function App() {
   const handleDbChange = async (newId: string) => {
     setIsDbChanging(true);
     try {
+      await setTenantId(newId);
       const slugId = newId.replace(/_/g, '-');
       if (newId !== 'default') {
         window.location.href = `/#/${slugId}`;
@@ -125,8 +126,8 @@ export default function App() {
       const detected = detectTenantFromUrl();
       const normalizedTenant = detected.replace(/-/g, '_'); 
       
-      if (normalizedTenant !== 'default' && normalizedTenant !== activeTenantId) {
-        console.log(`[URL] Phát hiện phân rã CSDL: ${normalizedTenant}. Đang chuyển cấu hình...`);
+      if (normalizedTenant !== activeTenantId) {
+        console.log(`[URL] Phát hiện thay đổi CSDL: ${normalizedTenant} khác với ${activeTenantId}. Đang chuyển cấu hình...`);
         await setTenantId(normalizedTenant);
       } else {
         await initSupabase();
