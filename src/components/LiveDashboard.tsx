@@ -18,6 +18,7 @@ import {
   GitCommit, 
   Grid
 } from 'lucide-react';
+import { LiveBracket } from './LiveBracket';
 
 interface AutoScrollListProps {
   children: React.ReactNode;
@@ -995,45 +996,7 @@ export default function LiveDashboard() {
 
                   {activeCycleTab === 'bracket' && (
                     <div id="live-bracket-slide">
-                      {koMatches.length === 0 ? (
-                        <div className="py-20 text-center text-zinc-500 border border-dashed border-zinc-200 rounded-3xl bg-zinc-50/50">Chưa lập sơ đồ Knockout cho nội dung này.</div>
-                      ) : (
-                        <div className="p-6 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-x-auto">
-                          <div className="flex justify-around min-w-[700px] gap-8">
-                            {Array.from(new Set(koMatches.map((m) => m.round))).sort((a,b)=>a-b).map((round) => {
-                              const roundMatches = koMatches.filter((m) => m.round === round);
-                              const name = roundMatches[0]?.knockoutRoundName || 'Vòng';
-                              
-                              return (
-                                <div key={round} className="flex-1 flex flex-col gap-6">
-                                  <h5 className="text-center text-[10px] font-black text-zinc-450 border-b pb-2 uppercase tracking-wider">{name}</h5>
-                                  <div className="flex flex-col justify-around h-[300px] gap-4">
-                                    {roundMatches.map((m) => {
-                                      const teamAName = currentEvt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
-                                      const teamBName = currentEvt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
-                                      return (
-                                        <div key={m.id} className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-2xl text-xs space-y-1.5 shadow-xs">
-                                          <div className="text-[8px] font-black text-zinc-450 border-b border-zinc-200/40 dark:border-zinc-800 pb-0.5 mb-1 select-none">
-                                            {getReadableKoMatchName(m.knockoutMatchId || '')}
-                                          </div>
-                                          <div className="flex justify-between items-center font-bold">
-                                            <span className={m.winnerId === m.teamAId ? 'text-blue-600' : 'text-zinc-500 truncate max-w-[80%]'}>{teamAName}</span>
-                                            <span className="font-mono font-bold leading-none shrink-0">{m.status === 'finished' ? m.scoreA : '-'}</span>
-                                          </div>
-                                          <div className="flex justify-between items-center font-bold">
-                                            <span className={m.winnerId === m.teamBId ? 'text-blue-600' : 'text-zinc-500 truncate max-w-[80%]'}>{teamBName}</span>
-                                            <span className="font-mono font-bold leading-none shrink-0">{m.status === 'finished' ? m.scoreB : '-'}</span>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
+                      <LiveBracket koMatches={koMatches} currentEvt={currentEvt} />
                     </div>
                   )}
                 </div>
