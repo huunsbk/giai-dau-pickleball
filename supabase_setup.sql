@@ -30,12 +30,14 @@ CREATE TABLE tournament (
     date TEXT,
     settings JSONB NOT NULL,
     current_event_id TEXT DEFAULT 'event-default',
+    tenant_id TEXT DEFAULT 'default' NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- 3. Tạo bảng DANH SÁCH SỰ KIỆN / NỘI DUNG THI ĐẤU (Events)
+-- 4. Tạo bảng DANH SÁCH SỰ KIỆN / NỘI DUNG THI ĐẤU (Events)
 CREATE TABLE events (
     id TEXT PRIMARY KEY,
+    tenant_id TEXT DEFAULT 'default' NOT NULL,
     name TEXT NOT NULL,
     settings JSONB NOT NULL,
     active_group_id TEXT,
@@ -44,9 +46,10 @@ CREATE TABLE events (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- 4. Tạo bảng DANH SÁCH CÁC ĐỘI BÓNG (Teams)
+-- 5. Tạo bảng DANH SÁCH CÁC ĐỘI BÓNG (Teams)
 CREATE TABLE teams (
     id TEXT PRIMARY KEY,
+    tenant_id TEXT DEFAULT 'default' NOT NULL,
     name TEXT NOT NULL,
     group_id TEXT,
     seed TEXT DEFAULT 'none',
@@ -54,18 +57,20 @@ CREATE TABLE teams (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- 5. Tạo bảng CÁC NHÓM / BẢNG ĐẤU (Groups)
+-- 6. Tạo bảng CÁC NHÓM / BẢNG ĐẤU (Groups)
 CREATE TABLE groups (
     id TEXT PRIMARY KEY,
+    tenant_id TEXT DEFAULT 'default' NOT NULL,
     name TEXT NOT NULL,
     team_ids JSONB DEFAULT '[]'::jsonb,
     event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- 6. Tạo bảng LỊCH THI ĐẤU VÀ TỶ SỐ TRẬN ĐẤU (Matches)
+-- 7. Tạo bảng LỊCH THI ĐẤU VÀ TỶ SỐ TRẬN ĐẤU (Matches)
 CREATE TABLE matches (
     id TEXT PRIMARY KEY,
+    tenant_id TEXT DEFAULT 'default' NOT NULL,
     group_id TEXT,
     team_a_id TEXT,
     team_b_id TEXT,
@@ -82,14 +87,26 @@ CREATE TABLE matches (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- 7. Tạo bảng GHI NHẬT KÝ HOẠT ĐỘNG (Audit Logs)
+-- 8. Tạo bảng GHI NHẬT KÝ HOẠT ĐỘNG (Audit Logs)
 CREATE TABLE audit_logs (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    tenant_id TEXT DEFAULT 'default' NOT NULL,
     timestamp TEXT NOT NULL,
     action TEXT NOT NULL,
     details TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+
+-- THÊM CÁC CHỈ MỤC (INDEXES) CHUYÊN NGHIỆP GIÚP TỐI ƯU HÓA HỆ THỐNG TRUY VẤN CHO NHIỀU GIẢI QUY MÔ LỚN
+CREATE INDEX idx_tournament_tenant_id ON tournament(tenant_id);
+CREATE INDEX idx_events_tenant_id ON events(tenant_id);
+CREATE INDEX idx_teams_event_id ON teams(event_id);
+CREATE INDEX idx_teams_tenant_id ON teams(tenant_id);
+CREATE INDEX idx_groups_event_id ON groups(event_id);
+CREATE INDEX idx_groups_tenant_id ON groups(tenant_id);
+CREATE INDEX idx_matches_event_id ON matches(event_id);
+CREATE INDEX idx_matches_tenant_id ON matches(tenant_id);
+CREATE INDEX idx_audit_logs_tenant_id ON audit_logs(tenant_id);
 
 -- ====================================================================
 -- PHÂN QUYỀN BẢO MẬT (Row Level Security - RLS)

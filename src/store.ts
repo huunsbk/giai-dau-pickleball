@@ -110,6 +110,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
   const errors: string[] = [];
   try {
     const tournamentId = state.tournament.id || 't-1';
+    const activeTenantId = state.activeTenantId || 'default';
     const eventIds = Object.keys(state.events || {});
     
     // Thu thập tất cả id trong Local State để tiến hành đồng bộ dọn dẹp
@@ -133,7 +134,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               id: g.id,
               name: g.name,
               team_ids: Array.isArray(g.teamIds) ? g.teamIds : [],
-              event_id: evtId
+              event_id: evtId,
+              tenant_id: activeTenantId
             });
           });
         }
@@ -147,7 +149,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               name: t.name,
               group_id: t.groupId || null,
               seed: t.seed || 'none',
-              event_id: evtId
+              event_id: evtId,
+              tenant_id: activeTenantId
             });
           });
         }
@@ -170,7 +173,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               knockout_match_id: m.knockoutMatchId || null,
               next_match_id: m.nextMatchId || null,
               next_match_slot: m.nextMatchSlot || null,
-              event_id: evtId
+              event_id: evtId,
+              tenant_id: activeTenantId
             });
           });
         }
@@ -192,25 +196,23 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
     const uniqueTeams = uniqueById(allTeams);
     const uniqueMatches = uniqueById(allMatches);
 
-    console.log(`[Supabase Sync] Bắt đầu đồng bộ trực tuyến. Đang dọn dẹp theo trình tự ngược...`);
+    console.log(`[Supabase Sync] Bắt đầu đồng bộ trực tuyến cho CSDL "${activeTenantId}". Đang dọn dẹp theo trình tự ngược...`);
 
     // ==========================================
     // THÌ 1: PRUNING PHASE (REVERSE DEPENDENCY ORDER)
     // ==========================================
 
-    // 1. Dọn dẹp Matches dư thừa trước vì nó trỏ FK tới Teams, Groups, và Events
+    // 1. Dọn dẹp Matches dư thừa trước vì nó trỏ FK tới Teams, Groups, và Events (chỉ dọn dẹp thuộc tenant hiện tại)
     try {
+      const mQuery = supabase.from('matches').delete().eq('tenant_id', activeTenantId);
       if (matchIdsInState.length > 0) {
-        const { error: mDelErr } = eventIds.length > 0
-          ? await supabase.from('matches').delete().in('event_id', eventIds).not('id', 'in', `(${matchIdsInState.map(id => `'${id}'`).join(',')})`)
-          : await supabase.from('matches').delete().not('id', 'in', `(${matchIdsInState.map(id => `'${id}'`).join(',')})`);
+        const { error: mDelErr } = await mQuery.not('id', 'in', `(${matchIdsInState.map(id => `'${id}'`).join(',')})`);
         if (mDelErr) {
           console.error("Lỗi tại bước dọn dẹp MATCHES:", mDelErr.message);
           errors.push(`Dọn dẹp trận đấu: ${mDelErr.message}`);
         }
       } else {
-        const query = supabase.from('matches').delete();
-        const { error: mClearErr } = eventIds.length > 0 ? await query.in('event_id', eventIds) : await query.eq('id', 'dummy_safeguard');
+        const { error: mClearErr } = await mQuery;
         if (mClearErr) {
           console.error("Lỗi tại bước xóa sạch MATCHES:", mClearErr.message);
           errors.push(`Xóa sạch trận đấu: ${mClearErr.message}`);
@@ -220,19 +222,17 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
       console.error("Lỗi tại bước dọn dẹp MATCHES (Ngoại lệ):", exc);
     }
 
-    // 2. Dọn dẹp Teams dư thừa vì nó trỏ FK tới Groups và Events
+    // 2. Dọn dẹp Teams dư thừa vì nó trỏ FK tới Groups và Events (chỉ dọn dẹp thuộc tenant hiện tại)
     try {
+      const tQuery = supabase.from('teams').delete().eq('tenant_id', activeTenantId);
       if (teamIdsInState.length > 0) {
-        const { error: tDelErr } = eventIds.length > 0
-          ? await supabase.from('teams').delete().in('event_id', eventIds).not('id', 'in', `(${teamIdsInState.map(id => `'${id}'`).join(',')})`)
-          : await supabase.from('teams').delete().not('id', 'in', `(${teamIdsInState.map(id => `'${id}'`).join(',')})`);
+        const { error: tDelErr } = await tQuery.not('id', 'in', `(${teamIdsInState.map(id => `'${id}'`).join(',')})`);
         if (tDelErr) {
           console.error("Lỗi tại bước dọn dẹp TEAMS:", tDelErr.message);
           errors.push(`Dọn dẹp đội: ${tDelErr.message}`);
         }
       } else {
-        const query = supabase.from('teams').delete();
-        const { error: tClearErr } = eventIds.length > 0 ? await query.in('event_id', eventIds) : await query.eq('id', 'dummy_safeguard');
+        const { error: tClearErr } = await tQuery;
         if (tClearErr) {
           console.error("Lỗi tại bước xóa sạch TEAMS:", tClearErr.message);
           errors.push(`Xóa sạch đội: ${tClearErr.message}`);
@@ -242,19 +242,17 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
       console.error("Lỗi tại bước dọn dẹp TEAMS (Ngoại lệ):", exc);
     }
 
-    // 3. Dọn dẹp Groups dư thừa vì nó trỏ FK tới Events
+    // 3. Dọn dẹp Groups dư thừa vì nó trỏ FK tới Events (chỉ dọn dẹp thuộc tenant hiện tại)
     try {
+      const gQuery = supabase.from('groups').delete().eq('tenant_id', activeTenantId);
       if (groupIdsInState.length > 0) {
-        const { error: gDelErr } = eventIds.length > 0
-          ? await supabase.from('groups').delete().in('event_id', eventIds).not('id', 'in', `(${groupIdsInState.map(id => `'${id}'`).join(',')})`)
-          : await supabase.from('groups').delete().not('id', 'in', `(${groupIdsInState.map(id => `'${id}'`).join(',')})`);
+        const { error: gDelErr } = await gQuery.not('id', 'in', `(${groupIdsInState.map(id => `'${id}'`).join(',')})`);
         if (gDelErr) {
           console.error("Lỗi tại bước dọn dẹp GROUPS:", gDelErr.message);
           errors.push(`Dọn dẹp bảng đấu: ${gDelErr.message}`);
         }
       } else {
-        const query = supabase.from('groups').delete();
-        const { error: gClearErr } = eventIds.length > 0 ? await query.in('event_id', eventIds) : await query.eq('id', 'dummy_safeguard');
+        const { error: gClearErr } = await gQuery;
         if (gClearErr) {
           console.error("Lỗi tại bước xóa sạch GROUPS:", gClearErr.message);
           errors.push(`Xóa sạch bảng đấu: ${gClearErr.message}`);
@@ -264,16 +262,17 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
       console.error("Lỗi tại bước dọn dẹp GROUPS (Ngoại lệ):", exc);
     }
 
-    // 4. Dọn dẹp Events dư thừa
+    // 4. Dọn dẹp Events dư thừa (chỉ dọn dẹp thuộc tenant hiện tại)
     try {
+      const eQuery = supabase.from('events').delete().eq('tenant_id', activeTenantId);
       if (eventIds.length > 0) {
-        const { error: eDelErr } = await supabase.from('events').delete().not('id', 'in', `(${eventIds.map(id => `'${id}'`).join(',')})`);
+        const { error: eDelErr } = await eQuery.not('id', 'in', `(${eventIds.map(id => `'${id}'`).join(',')})`);
         if (eDelErr) {
           console.error("Lỗi tại bước dọn dẹp EVENTS:", eDelErr.message);
           errors.push(`Dọn dẹp sự kiện: ${eDelErr.message}`);
         }
       } else {
-        const { error: eClearErr } = await supabase.from('events').delete().eq('id', 'dummy_safeguard');
+        const { error: eClearErr } = await eQuery;
         if (eClearErr) {
           console.error("Lỗi tại bước xóa sạch EVENTS:", eClearErr.message);
           errors.push(`Xóa sạch sự kiện: ${eClearErr.message}`);
@@ -299,7 +298,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
         location: state.tournament.location,
         date: state.tournament.date,
         settings: state.tournament.settings,
-        current_event_id: state.currentEventId
+        current_event_id: state.currentEventId,
+        tenant_id: activeTenantId
       });
       if (tErr) {
         console.error("Lỗi tại bước 1 (tournament):", tErr.message, tErr.details);
@@ -320,7 +320,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
             settings: evt.settings || state.tournament.settings || DEFAULT_SETTINGS,
             active_group_id: evt.activeGroupId || null,
             advance_selection_mode: evt.advanceSelectionMode || 'auto',
-            manual_qualified_team_ids: evt.manualQualifiedTeamIds || []
+            manual_qualified_team_ids: evt.manualQualifiedTeamIds || [],
+            tenant_id: activeTenantId
           });
           if (eErr) {
             console.error(`Lỗi tại bước 2 (events) - ID ${evt.id}:`, eErr.message, eErr.details);
@@ -518,7 +519,8 @@ export const useTournamentStore = create<AppState>()(
           supabase.from('audit_logs').insert([{
             timestamp: newLog.timestamp,
             action: newLog.action,
-            details: newLog.details
+            details: newLog.details,
+            tenant_id: currentState.activeTenantId || 'default'
           }]).then();
         }
       };
@@ -1661,15 +1663,16 @@ export const useTournamentStore = create<AppState>()(
 
         initSupabase: async () => {
           try {
-            console.log('Khởi tạo và đồng bộ dữ liệu từ Supabase...');
-            
             // Lấy trạng thái dữ liệu trong store cục bộ trước khi query (khôi phục từ localStorage)
             const localState = get();
+            const activeTenantId = localState.activeTenantId || 'default';
+            console.log(`Khởi tạo và đồng bộ dữ liệu cho CSDL phân rã: "${activeTenantId}" từ Supabase...`);
+            
             const hasLocalTeams = Object.keys(localState.teams || {}).length > 0;
             const hasLocalMatches = (localState.matches || []).length > 0;
             const hasLocalData = hasLocalTeams || hasLocalMatches;
 
-            // 1. Đọc giải đấu (Tournament metadata)
+            // 1. Đọc giải đấu (Tournament metadata) - Bảng cấu hình chung nhỏ gọn
             const { data: tData, error: tError } = await supabase.from('tournament').select('*');
             if (tError) {
               if (tError.code === '42P01' || tError.message?.includes('relation') || tError.message?.includes('does not exist')) {
@@ -1704,29 +1707,109 @@ export const useTournamentStore = create<AppState>()(
             // Lọc ra các giải đấu thông thường (bỏ qua bản ghi cấu hình tài khoản)
             const regularTournaments = (tData || []).filter((row: any) => row.id !== 'accounts_config');
 
-            // 2. Đọc danh sách sự kiện
-            const { data: eData, error: eError } = await supabase.from('events').select('*');
-            if (eError) throw eError;
+            // 2. Đọc danh sách sự kiện - TRUY VẤN LỌC TRỰC TIẾP Ở DB LEVEL ĐỂ TỐI ƯU HÓA QUY MÔ LỚN (Có Defensive Fallback)
+            let eData: any[] | null = null;
+            try {
+              const res = await supabase.from('events').select('*').eq('tenant_id', activeTenantId);
+              if (res.error) {
+                if (res.error.code === '42703' || res.error.message?.includes('tenant_id')) {
+                  console.warn("LƯU Ý: Cột 'tenant_id' chưa được thêm trên Supabase. Đang kích hoạt Fallback tự động tải toàn bộ.");
+                  const fallbackRes = await supabase.from('events').select('*');
+                  if (fallbackRes.error) throw fallbackRes.error;
+                  eData = fallbackRes.data;
+                } else {
+                  throw res.error;
+                }
+              } else {
+                eData = res.data;
+              }
+            } catch (err) {
+              throw err;
+            }
 
-            // 3. Đọc dữ liệu khác cấu trúc
-            const { data: teamData, error: teamError } = await supabase.from('teams').select('*');
-            if (teamError) throw teamError;
+            // 3. Đọc dữ liệu teams - TRUY VẤN LỌC TRỰC TIẾP Ở DB LEVEL (Có Defensive Fallback)
+            let teamData: any[] | null = null;
+            try {
+              const res = await supabase.from('teams').select('*').eq('tenant_id', activeTenantId);
+              if (res.error) {
+                if (res.error.code === '42703' || res.error.message?.includes('tenant_id')) {
+                  const fallbackRes = await supabase.from('teams').select('*');
+                  if (fallbackRes.error) throw fallbackRes.error;
+                  teamData = fallbackRes.data;
+                } else {
+                  throw res.error;
+                }
+              } else {
+                teamData = res.data;
+              }
+            } catch (err) {
+              throw err;
+            }
 
-            const { data: groupData, error: groupError } = await supabase.from('groups').select('*');
-            if (groupError) throw groupError;
+            // 4. Đọc dữ liệu groups - TRUY VẤN LỌC TRỰC TIẾP Ở DB LEVEL (Có Defensive Fallback)
+            let groupData: any[] | null = null;
+            try {
+              const res = await supabase.from('groups').select('*').eq('tenant_id', activeTenantId);
+              if (res.error) {
+                if (res.error.code === '42703' || res.error.message?.includes('tenant_id')) {
+                  const fallbackRes = await supabase.from('groups').select('*');
+                  if (fallbackRes.error) throw fallbackRes.error;
+                  groupData = fallbackRes.data;
+                } else {
+                  throw res.error;
+                }
+              } else {
+                groupData = res.data;
+              }
+            } catch (err) {
+              throw err;
+            }
 
-            const { data: matchData, error: matchError } = await supabase.from('matches').select('*');
-            if (matchError) throw matchError;
+            // 5. Đọc dữ liệu matches - TRUY VẤN LỌC TRỰC TIẾP Ở DB LEVEL (Có Defensive Fallback)
+            let matchData: any[] | null = null;
+            try {
+              const res = await supabase.from('matches').select('*').eq('tenant_id', activeTenantId);
+              if (res.error) {
+                if (res.error.code === '42703' || res.error.message?.includes('tenant_id')) {
+                  const fallbackRes = await supabase.from('matches').select('*');
+                  if (fallbackRes.error) throw fallbackRes.error;
+                  matchData = fallbackRes.data;
+                } else {
+                  throw res.error;
+                }
+              } else {
+                matchData = res.data;
+              }
+            } catch (err) {
+              throw err;
+            }
 
-            const { data: logData } = await supabase.from('audit_logs').select('*').order('id', { ascending: false }).limit(500);
+            // 6. Đọc kết hoạt logs - TRUY VẤN LỌC TRỰC TIẾP Ở DB LEVEL (Có Defensive Fallback)
+            let logData: any[] | null = null;
+            try {
+              const res = await supabase.from('audit_logs').select('*').eq('tenant_id', activeTenantId).order('id', { ascending: false }).limit(200);
+              if (res.error) {
+                if (res.error.code === '42703' || res.error.message?.includes('tenant_id')) {
+                  const fallbackRes = await supabase.from('audit_logs').select('*').order('id', { ascending: false }).limit(200);
+                  logData = fallbackRes.data || [];
+                } else {
+                  logData = [];
+                }
+              } else {
+                logData = res.data;
+              }
+            } catch (err) {
+              logData = [];
+            }
 
             const hasRemoteData = (teamData && teamData.length > 0) || (matchData && matchData.length > 0);
 
             // TÌNH HUỐNG 1: TRÊN CLOUD TRỐNG HOÀN TOÀN NHƯNG DƯỚI CLIENT LẠI CÓ SẴN DỮ LIỆU
-            // Đây là lúc ta vừa kết nối Supabase trống. Nếu là ADMIN, tự động đồng bộ (push) dữ liệu cũ lên cloud!
-            if (!hasRemoteData && hasLocalData) {
+            // CỰC KỲ QUAN TRỌNG: Chỉ tự động đồng bộ (push) dữ liệu cũ lên cho tenant mặc định ('default') khi khởi chạy lần đầu tiên.
+            // Ngăn chặn triệt để tình trạng lệch hoặc sao chép rác dữ liệu từ tenant cũ sang tenant mới tinh khi đổi view CSDL!
+            if (activeTenantId === 'default' && !hasRemoteData && hasLocalData) {
               if (localState.isAdmin) {
-                console.log('Phát hiện cơ sở dữ liệu Supabase online đang trống, nhưng Client lại đang có dữ liệu giải đấu cũ. Đang tự động tải dữ liệu cục bộ lên đám mây làm dữ liệu gốc...');
+                console.log('Phát hiện cơ sỡ dữ liệu mặc định trống, đang đồng bộ dữ liệu Local Cache lên cloud...');
                 await syncStateToSupabase(localState);
                 
                 // Đồng bộ mảng logs ban đầu nếu có
@@ -1734,7 +1817,8 @@ export const useTournamentStore = create<AppState>()(
                   const initialLogs = localState.logs.slice(0, 100).map(l => ({
                     timestamp: l.timestamp,
                     action: l.action,
-                    details: l.details
+                    details: l.details,
+                    tenant_id: 'default'
                   }));
                   await supabase.from('audit_logs').insert(initialLogs);
                 }
@@ -1743,14 +1827,13 @@ export const useTournamentStore = create<AppState>()(
                 console.log('Tự động nạp dữ liệu ban đầu lên Supabase trực tuyến thành công!');
                 return;
               } else {
-                // Nếu là Viewer vãng lai nhưng Cloud đang trống, ta giữ lại thông tin local cache để hiển thị tránh trắng trang.
                 console.log('Cơ sở dữ liệu Supabase online trống, hiển thị tạm thời trạng thái Local Cache đệm.');
                 originalSet({ supabaseConnected: true });
                 return;
               }
             }
 
-            // TÌNH HUỐNG 2: SUPABASE ĐÃ CÓ SẴN DỮ LIỆU THỰT -> TỰ ĐỘNG LỌC THEO TENANT (CƠ SỞ DỮ LIỆU RIÊNG)
+            // TÌNH HUỐNG 2: SUPABASE ĐÃ CÓ VỀ HOẶC CẦN KHỞI TẠO NỘI DUNG RIÊNG CHO TENANT
             const targetTid = localState.activeTenantId === 'default' ? 't-1' : localState.activeTenantId;
             let dbTournament = regularTournaments.find((rowId: any) => rowId.id === targetTid) || null;
             if (!dbTournament) {
@@ -1771,7 +1854,8 @@ export const useTournamentStore = create<AppState>()(
                 location: DEFAULT_TOURNAMENT.location,
                 date: DEFAULT_TOURNAMENT.date,
                 settings: DEFAULT_SETTINGS,
-                current_event_id: localState.activeTenantId === 'default' ? 'event-default' : `${localState.activeTenantId}__event-default`
+                current_event_id: localState.activeTenantId === 'default' ? 'event-default' : `${localState.activeTenantId}__event-default`,
+                tenant_id: activeTenantId
               };
               if (localState.userRole === 'admin1' || localState.userRole === 'admin2') {
                 await supabase.from('tournament').insert([defaultObj]);
@@ -1796,7 +1880,8 @@ export const useTournamentStore = create<AppState>()(
                 settings: DEFAULT_SETTINGS,
                 active_group_id: null,
                 advance_selection_mode: 'auto',
-                manual_qualified_team_ids: []
+                manual_qualified_team_ids: [],
+                tenant_id: activeTenantId
               };
               if (localState.userRole === 'admin1' || localState.userRole === 'admin2') {
                 await supabase.from('events').insert([defaultEvt]);
