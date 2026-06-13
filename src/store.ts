@@ -340,33 +340,39 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
       if (tErr) {
         console.error("Lỗi tại bước 1 (tournament):", tErr.message, tErr.details);
         errors.push(`Giải đấu: ${tErr.message}`);
+        return;
       }
     } catch (exc: any) {
       console.error("Lỗi tại bước 1 - tournament (Ngoại lệ):", exc);
+      return;
     }
 
     // Bước 2: Ghi dữ liệu vào bảng `events` (sau khi đã có tournament)
     try {
-      for (const evtId of eventIds) {
+      const dbEventsArray = eventIds.map(evtId => {
         const evt = state.events[evtId];
-        if (evt) {
-          const { error: eErr } = await supabase.from('events').upsert({
-            id: evtId,
-            name: evt.name,
-            settings: evt.settings || state.tournament.settings || DEFAULT_SETTINGS,
-            active_group_id: evt.activeGroupId || null,
-            advance_selection_mode: evt.advanceSelectionMode || 'auto',
-            manual_qualified_team_ids: evt.manualQualifiedTeamIds || [],
-            tenant_id: activeTenantId
-          });
-          if (eErr) {
-            console.error(`Lỗi tại bước 2 (events) - ID ${evt.id}:`, eErr.message, eErr.details);
-            errors.push(`Sự kiện "${evt.name}": ${eErr.message}`);
-          }
+        return {
+          id: evtId,
+          name: evt.name,
+          settings: evt.settings || state.tournament.settings || DEFAULT_SETTINGS,
+          active_group_id: evt.activeGroupId || null,
+          advance_selection_mode: evt.advanceSelectionMode || 'auto',
+          manual_qualified_team_ids: evt.manualQualifiedTeamIds || [],
+          tenant_id: activeTenantId
+        };
+      });
+      
+      if (dbEventsArray.length > 0) {
+        const { error: eErr } = await supabase.from('events').upsert(dbEventsArray);
+        if (eErr) {
+          console.error(`Lỗi tại bước 2 (events):`, eErr.message, eErr.details);
+          errors.push(`Sự kiện: ${eErr.message}`);
+          return; // Ngừng quá trình đồng bộ để bảo vệ toàn vẹn Foreign Key nếu events thất bại
         }
       }
     } catch (exc: any) {
       console.error("Lỗi tại bước 2 - events (Ngoại lệ):", exc);
+      return;
     }
 
     // Bước 3: Ghi dữ liệu vào bảng `groups` (sau khi đã có events)
@@ -1910,7 +1916,10 @@ export const useTournamentStore = create<AppState>()(
                 tenant_id: activeTenantId
               };
               if (localState.userRole === 'admin1' || localState.userRole === 'admin2') {
-                await supabase.from('events').insert([defaultEvt]);
+                const { error: insErr } = await supabase.from('events').insert([defaultEvt]);
+                if (insErr) {
+                  console.error("Lỗi khi tạo Event mặc định trên Supabase:", insErr.message, insErr.details);
+                }
               }
               dbEvents = [defaultEvt];
             }
