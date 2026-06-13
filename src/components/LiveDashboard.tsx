@@ -498,7 +498,7 @@ export default function LiveDashboard() {
             return (
               <div 
                 key={evt.id} 
-                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-805/80 rounded-3xl p-5 md:p-6 shadow-sm space-y-6"
+                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-805/80 rounded-3xl p-2 sm:p-5 md:p-6 shadow-sm space-y-6"
               >
                 {/* Dải Banner của từng Nội dung */}
                 <div className="flex items-center justify-between border-b border-zinc-150 dark:border-zinc-800 pb-3">
@@ -521,7 +521,7 @@ export default function LiveDashboard() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   
                   {/* Cột 1: Bảng Xếp Hạng Vòng Bảng */}
-                  <div className="space-y-3 bg-zinc-50/50 dark:bg-zinc-950/20 py-3 px-4 rounded-2xl border border-zinc-150 dark:border-zinc-850">
+                  <div className="space-y-3 bg-zinc-50/50 dark:bg-zinc-950/20 py-3 px-1.5 sm:px-4 rounded-2xl border border-zinc-150 dark:border-zinc-850">
                     <span className="flex items-center gap-1.5 text-xs font-black text-zinc-400 uppercase tracking-wider" style={{ color: '#c225a2', fontSize: '14px' }}>
                       <Layers size={13} /> Vòng bảng & Xếp hạng
                     </span>
@@ -534,8 +534,8 @@ export default function LiveDashboard() {
                           return (
                             <div key={group.id} className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-805 overflow-hidden shadow-sm mb-4">
                               {/* Header Bar */}
-                              <div className="bg-blue-600 text-white py-2 px-3 flex items-center justify-between">
-                                <span className="text-[11px] font-extrabold flex items-center gap-1.5 tracking-tight uppercase">
+                              <div className="bg-blue-600 text-white py-2 px-2 sm:px-3 flex items-center justify-between">
+                                <span className="text-[10px] sm:text-[11px] font-extrabold flex items-center gap-1.5 tracking-tight uppercase">
                                   <Award size={13} /> BẢNG XẾP HẠNG - {group.name}
                                 </span>
                                 <span className="text-[9px] font-bold bg-white/20 px-2 py-0.5 rounded-full border border-white/20 select-none hidden sm:inline-block">
@@ -543,41 +543,41 @@ export default function LiveDashboard() {
                                 </span>
                               </div>
                               {/* Table Data */}
-                              <div className="overflow-x-auto">
-                                <table className="w-full text-left text-[11px]">
+                              <div className="overflow-x-auto overflow-y-hidden">
+                                <table className="w-full text-left text-[9px] sm:text-[11px] table-fixed">
                                   <thead>
-                                    <tr className="bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 font-bold text-[10px] md:text-[11px]">
-                                      <th className="py-2 px-2 text-center w-8">Hạng</th>
-                                      <th className="py-2 px-2 text-left min-w-[90px]">Đội tuyển</th>
-                                      <th className="py-2 px-1.5 text-center">Trận</th>
-                                      <th className="py-2 px-1.5 text-center text-emerald-600">T</th>
-                                      <th className="py-2 px-1.5 text-center text-red-500">B</th>
-                                      <th className="py-2 px-1.5 text-center text-zinc-500">H/S</th>
-                                      <th className="py-2 px-2 text-center text-blue-600">Điểm</th>
+                                    <tr className="bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 font-bold text-[9px] sm:text-[10px] md:text-[11px] leading-tight">
+                                      <th className="py-1.5 px-0 text-center w-6 sm:w-8">Hạng</th>
+                                      <th className="py-1.5 px-0.5 text-center min-w-[50px] w-auto">Đội</th>
+                                      <th className="py-1.5 px-0 text-center w-6 sm:w-8">Trận</th>
+                                      <th className="py-1.5 px-0 text-center text-emerald-600 w-4 sm:w-6">T</th>
+                                      <th className="py-1.5 px-0 text-center text-red-500 w-4 sm:w-6">B</th>
+                                      <th className="py-1.5 px-0 text-center text-zinc-500 w-6 sm:w-8">H/S</th>
+                                      <th className="py-1.5 px-0.5 text-center text-blue-600 w-8 sm:w-10">Điểm</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {std.map((s, idx) => {
                                       let rankBadge = null;
                                       if (idx === 0) {
-                                        rankBadge = <span className="w-5 h-5 rounded-full inline-flex items-center justify-center font-bold text-[10px] bg-amber-100 text-amber-800 border border-amber-200/40">1</span>;
+                                        rankBadge = <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full inline-flex items-center justify-center font-bold text-[9px] sm:text-[10px] bg-amber-100 text-amber-800 border border-amber-200/40">1</span>;
                                       } else if (idx === 1) {
-                                        rankBadge = <span className="w-5 h-5 rounded-full inline-flex items-center justify-center font-bold text-[10px] bg-zinc-150 text-zinc-700 border border-zinc-200/40">2</span>;
+                                        rankBadge = <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full inline-flex items-center justify-center font-bold text-[9px] sm:text-[10px] bg-zinc-150 text-zinc-700 border border-zinc-200/40">2</span>;
                                       } else {
                                         rankBadge = <span className="text-zinc-400 font-bold block">{idx + 1}</span>;
                                       }
 
                                       return (
                                         <tr key={s.teamId} className="border-b border-zinc-100 dark:border-zinc-850/60 hover:bg-zinc-50 dark:hover:bg-zinc-850/10">
-                                          <td className="py-2 px-2 text-center font-bold text-[11px]">
+                                          <td className="py-1.5 px-0 text-center font-bold text-[10px] sm:text-[11px]">
                                             <span className="flex justify-center items-center">{rankBadge}</span>
                                           </td>
-                                          <td className="py-2 px-2 font-extrabold text-zinc-700 dark:text-zinc-300 truncate max-w-[130px] text-[12px]">{s.teamName}</td>
-                                          <td className="py-2 px-1.5 text-center text-zinc-600 dark:text-zinc-400 font-medium">{s.matchesPlayed}</td>
-                                          <td className="py-2 px-1.5 text-center text-emerald-600 font-bold">{s.matchesWon}</td>
-                                          <td className="py-2 px-1.5 text-center text-red-500 font-bold">{s.matchesLost}</td>
-                                          <td className="py-2 px-1.5 text-center text-zinc-500 font-medium">{s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff === 0 ? 'Ø' : s.pointDiff}</td>
-                                          <td className="py-2 px-2 text-center font-extrabold text-blue-600 text-[13px]">{s.points}</td>
+                                          <td className="py-1.5 px-0.5 text-center font-extrabold text-zinc-700 dark:text-zinc-300 truncate text-[10px] sm:text-[12px]">{s.teamName}</td>
+                                          <td className="py-1.5 px-0 text-center text-zinc-600 dark:text-zinc-400 font-medium">{s.matchesPlayed}</td>
+                                          <td className="py-1.5 px-0 text-center text-emerald-600 font-bold">{s.matchesWon}</td>
+                                          <td className="py-1.5 px-0 text-center text-red-500 font-bold">{s.matchesLost}</td>
+                                          <td className="py-1.5 px-0 text-center text-zinc-500 font-medium tracking-tighter">{s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff === 0 ? 'Ø' : s.pointDiff}</td>
+                                          <td className="py-1.5 px-0.5 text-center font-extrabold text-blue-600 text-[11px] sm:text-[13px]">{s.points}</td>
                                         </tr>
                                       );
                                     })}
