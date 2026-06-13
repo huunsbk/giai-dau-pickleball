@@ -17,6 +17,8 @@ import LiveDashboard from './components/LiveDashboard';
 import AuditLogger from './components/AuditLogger';
 import EventBar from './components/EventBar';
 import ExportManager from './components/ExportManager';
+import AccountManager from './components/AccountManager';
+import AuthModal from './components/AuthModal';
 
 import {
   Trophy,
@@ -30,7 +32,11 @@ import {
   Sun,
   Moon,
   Zap,
-  FileDown
+  FileDown,
+  UserCheck,
+  ShieldAlert,
+  User,
+  Settings
 } from 'lucide-react';
 
 export default function App() {
@@ -44,9 +50,15 @@ export default function App() {
     setAdminStatus,
     initSupabase,
     supabaseConnected,
+    currentUser,
+    userRole,
+    activeTenantId,
+    setAuthStatus,
+    setTenantId,
+    accounts
   } = useTournamentStore();
 
-  const ADMIN_PASSWORD = 'admin123';
+  const [isLoginOpen, setIsLoginOpen] = React.useState(false);
 
   // Khởi tạo & đồng bộ dữ liệu từ Supabase trực tuyến khi khởi chạy ứng dụng
   useEffect(() => {
@@ -66,15 +78,9 @@ export default function App() {
 
   const handleAdminAuth = () => {
     if (isAdmin) {
-      setAdminStatus(false);
+      setAuthStatus('guest', null, 'default');
     } else {
-      const passwordInput = prompt('Vui lòng nhập mật khẩu Admin để cấu hình giải đấu:');
-      if (passwordInput === null) return;
-      if (passwordInput === ADMIN_PASSWORD) {
-        setAdminStatus(true);
-      } else {
-        alert('Mật khẩu chưa chính xác. Bạn vẫn đang ở vai trò khách vãng lai (Chỉ xem).');
-      }
+      setIsLoginOpen(true);
     }
   };
 
@@ -87,17 +93,20 @@ export default function App() {
     }
   }, [darkMode]);
 
-  const navItems = [
-    { id: 'dashboard', label: 'Trang chủ', icon: Trophy },
-    { id: 'teams', label: 'Quản lý đội', icon: Users },
-    { id: 'groups', label: 'Chia bảng', icon: Layers },
-    { id: 'matches', label: 'Lịch & Kết quả', icon: CalendarDays },
-    { id: 'standings', label: 'Tuyển chọn vòng trong', icon: FileSpreadsheet },
-    { id: 'knockout', label: 'Sơ đồ trực tiếp', icon: Network },
-    { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv },
-    { id: 'export', label: 'Xuất file', icon: FileDown },
-    { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList },
+  const allNavItems = [
+    { id: 'dashboard', label: 'Trang chủ', icon: Trophy, roles: ['guest', 'admin1', 'admin2'] },
+    { id: 'teams', label: 'Quản lý đội', icon: Users, roles: ['admin1', 'admin2'] },
+    { id: 'groups', label: 'Chia bảng', icon: Layers, roles: ['admin1', 'admin2'] },
+    { id: 'matches', label: 'Lịch & Kết quả', icon: CalendarDays, roles: ['admin1', 'admin2'] },
+    { id: 'standings', label: 'Tuyển chọn vòng trong', icon: FileSpreadsheet, roles: ['admin1', 'admin2'] },
+    { id: 'knockout', label: 'Sơ đồ trực tiếp', icon: Network, roles: ['guest', 'admin1', 'admin2'] },
+    { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv, roles: ['guest', 'admin1', 'admin2'] },
+    { id: 'export', label: 'Xuất file', icon: FileDown, roles: ['admin1', 'admin2'] },
+    { id: 'accounts', label: 'Quản trị đơn vị', icon: Settings, roles: ['admin1'] },
+    { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList, roles: ['admin1', 'admin2'] },
   ];
+
+  const navItems = allNavItems.filter(item => item.roles.includes(userRole));
 
   return (
     <div className="min-h-screen bg-[#f8fafc] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans transition-colors duration-250">
@@ -209,14 +218,37 @@ export default function App() {
               <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800"></span>
 
               {isAdmin ? (
-                <div className="flex items-center gap-2">
-                  <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-350 px-2 py-0.5 rounded-md font-bold text-[10px] border border-emerald-300 flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-550 animate-ping"></span>
-                    Quyền: Admin
-                  </span>
+                <div className="flex items-center gap-2 text-xs">
+                  {userRole === 'admin1' && (
+                    <span className="bg-indigo-50 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 px-2 py-0.5 rounded-md font-bold text-[10px] border border-indigo-200 flex items-center gap-1">
+                      👑 Cấp 1 (huunsbk)
+                    </span>
+                  )}
+                  {userRole === 'admin2' && (
+                    <span className="bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-350 px-2 py-0.5 rounded-md font-bold text-[10px] border border-emerald-250 flex items-center gap-1">
+                      👤 BTC: @{currentUser}
+                    </span>
+                  )}
+                  {userRole === 'admin1' && (
+                    <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-zinc-800 px-2.5 py-0.5 rounded-md text-[10px] border border-[#e2e8f0] dark:border-zinc-700">
+                      <span className="text-zinc-500 font-bold uppercase tracking-wider text-[9px]">Xem CSDL:</span>
+                      <select
+                        value={activeTenantId}
+                        onChange={(e) => setTenantId(e.target.value)}
+                        className="bg-transparent font-extrabold focus:outline-none text-zinc-950 dark:text-zinc-200 cursor-pointer"
+                      >
+                        <option value="default" className="text-black">Mặc định (t-1)</option>
+                        {accounts.map(acc => (
+                          <option key={acc.username} value={acc.username} className="text-black">
+                            {acc.displayName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <button
-                    onClick={handleAdminAuth}
-                    className="cursor-pointer text-[10px] font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-red-600 dark:text-red-400 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded transition-colors"
+                    onClick={() => setAuthStatus('guest', null, 'default')}
+                    className="cursor-pointer text-[10px] font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-red-650 dark:text-red-400 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded transition-colors"
                   >
                     Đăng xuất
                   </button>
@@ -234,7 +266,7 @@ export default function App() {
 
           {/* Outer Wrapper cho màn hình chính - Mở rộng toàn bộ chiều rộng (Full Width) */}
           <main className="flex-1 p-4 lg:p-6 w-full print:p-0 print:w-full" id="main-content-panel">
-            {selectedTab !== 'live' && selectedTab !== 'logs' && selectedTab !== 'export' && <EventBar />}
+            {selectedTab !== 'live' && selectedTab !== 'logs' && selectedTab !== 'export' && selectedTab !== 'accounts' && <EventBar />}
             
             <div className="animate-fade-in">
               {selectedTab === 'dashboard' && <Dashboard />}
@@ -245,6 +277,7 @@ export default function App() {
               {selectedTab === 'knockout' && <KnockoutBracket />}
               {selectedTab === 'live' && <LiveDashboard />}
               {selectedTab === 'export' && <ExportManager />}
+              {selectedTab === 'accounts' && <AccountManager />}
               {selectedTab === 'logs' && <AuditLogger />}
             </div>
           </main>
@@ -256,6 +289,9 @@ export default function App() {
         </div>
 
       </div>
+
+      {/* Đăng nhập Admin Overlay */}
+      <AuthModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
     </div>
   );
 }

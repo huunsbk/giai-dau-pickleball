@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Tournament, Team, Group, Match, AuditLog, TournamentSettings, SeedType, GroupStanding, ThirdPlaceStanding, EventData } from './types';
+import { Tournament, Team, Group, Match, AuditLog, TournamentSettings, SeedType, GroupStanding, ThirdPlaceStanding, EventData, Account } from './types';
 import { generateRoundRobinMatches, calculateGroupStandings, calculateBestThirdPlaces, generateKnockoutMatchesSchema, balanceMatchesRestTime } from './utils/tournamentEngine';
 import { supabase, checkSupabaseConnection } from './supabaseClient';
 
@@ -26,6 +26,17 @@ interface AppState {
   setAdminStatus: (status: boolean) => void;
   supabaseConnected: boolean | null; // null = checking, true = online, false = using offline/cached data
   supabaseSyncError: string | null;
+
+  // Multi-tier accounts configuration
+  accounts: Account[];
+  currentUser: string | null;
+  userRole: 'guest' | 'admin1' | 'admin2'; // guest = viewer, admin1 = huunsbk (root), admin2 = level 2 account
+  activeTenantId: string; // 'default' or username of level 2 account
+  setAuthStatus: (role: 'guest' | 'admin1' | 'admin2', username: string | null, tenantId: string) => void;
+  setTenantId: (tenantId: string) => Promise<void>;
+  addAccount2: (acc: Account) => Promise<boolean>;
+  updateAccount2: (acc: Account) => Promise<boolean>;
+  deleteAccount2: (username: string) => Promise<boolean>;
 
   // Actions
   checkConnection: () => Promise<boolean>;
@@ -528,16 +539,88 @@ export const useTournamentStore = create<AppState>()(
           }
         },
         currentEventId: 'event-default',
-        isAdmin: typeof window !== 'undefined' ? (localStorage.getItem('pickleball_admin_auth') === 'true') : false,
-        setAdminStatus: (status: boolean) => {
-          if (typeof window !== 'undefined') {
-            if (status) {
-              localStorage.setItem('pickleball_admin_auth', 'true');
-            } else {
-              localStorage.removeItem('pickleball_admin_auth');
-            }
+        accounts: [],
+        currentUser: null,
+        userRole: 'guest',
+        activeTenantId: 'default',
+        setAuthStatus: (role, username, tenantId) => {
+          set({
+            userRole: role,
+            currentUser: username,
+            activeTenantId: tenantId,
+            isAdmin: role === 'admin1' || role === 'admin2',
+            selectedTab: 'dashboard'
+          });
+          get().initSupabase();
+        },
+        setTenantId: async (tenantId) => {
+          set({ activeTenantId: tenantId });
+          await get().initSupabase();
+        },
+        addAccount2: async (acc) => {
+          const nextAccounts = [...get().accounts, acc];
+          set({ accounts: nextAccounts });
+          try {
+            const { error } = await supabase.from('tournament').upsert({
+              id: 'accounts_config',
+              name: 'Cấu hình tài khoản cấp 2',
+              organization: 'Hệ thống',
+              location: '',
+              date: '',
+              settings: { accounts: nextAccounts },
+              current_event_id: ''
+            });
+            return !error;
+          } catch (e) {
+            console.error(e);
+            return false;
           }
-          set({ isAdmin: status });
+        },
+        updateAccount2: async (acc) => {
+          const nextAccounts = get().accounts.map(a => a.username === acc.username ? acc : a);
+          set({ accounts: nextAccounts });
+          try {
+            const { error } = await supabase.from('tournament').upsert({
+              id: 'accounts_config',
+              name: 'Cấu hình tài khoản cấp 2',
+              organization: 'Hệ thống',
+              location: '',
+              date: '',
+              settings: { accounts: nextAccounts },
+              current_event_id: ''
+            });
+            return !error;
+          } catch (e) {
+            console.error(e);
+            return false;
+          }
+        },
+        deleteAccount2: async (username) => {
+          const nextAccounts = get().accounts.filter(a => a.username !== username);
+          set({ accounts: nextAccounts });
+          try {
+            const { error } = await supabase.from('tournament').upsert({
+              id: 'accounts_config',
+              name: 'Cấu hình tài khoản cấp 2',
+              organization: 'Hệ thống',
+              location: '',
+              date: '',
+              settings: { accounts: nextAccounts },
+              current_event_id: ''
+            });
+            return !error;
+          } catch (e) {
+            console.error(e);
+            return false;
+          }
+        },
+        isAdmin: false,
+        setAdminStatus: (status: boolean) => {
+          if (!status) {
+            get().setAuthStatus('guest', null, 'default');
+          } else {
+            set({ isAdmin: true, userRole: 'admin2' });
+          }
         },
         supabaseConnected: null,
         supabaseSyncError: null,
@@ -568,7 +651,8 @@ export const useTournamentStore = create<AppState>()(
 
         addEvent: (name) => {
           if (!get().isAdmin) return;
-          const id = `event-${Math.random().toString(36).substring(2, 9)}`;
+          const tenantPrefix = get().activeTenantId === 'default' ? '' : `${get().activeTenantId}__`;
+          const id = `${tenantPrefix}event-${Math.random().toString(36).substring(2, 9)}`;
           const trimmedName = name.trim() || 'Nội dung mới';
           set((state) => {
             const nextEvents = { ...state.events };
@@ -1556,6 +1640,14 @@ export const useTournamentStore = create<AppState>()(
               throw tError;
             }
 
+            // Đồng bộ và trích xuất danh sách tài khoản cấp 2 từ dòng 'accounts_config'
+            const accountsConfigRow = (tData || []).find((row: any) => row.id === 'accounts_config');
+            const loadedAccounts: Account[] = accountsConfigRow?.settings?.accounts || [];
+            originalSet({ accounts: loadedAccounts });
+
+            // Lọc ra các giải đấu thông thường (bỏ qua bản ghi cấu hình tài khoản)
+            const regularTournaments = (tData || []).filter((row: any) => row.id !== 'accounts_config');
+
             // 2. Đọc danh sách sự kiện
             const { data: eData, error: eError } = await supabase.from('events').select('*');
             if (eError) throw eError;
@@ -1602,39 +1694,67 @@ export const useTournamentStore = create<AppState>()(
               }
             }
 
-            // TÌNH HUỐNG 2: SUPABASE ĐÃ CÓ SẴN DỮ LIỆU THỰT -> TỰ ĐỘNG TẢI VỀ VÀ CẬP NHẬT TRÌNH DUYỆT
-            let dbTournament = tData && tData.length > 0 ? tData[0] : null;
+            // TÌNH HUỐNG 2: SUPABASE ĐÃ CÓ SẴN DỮ LIỆU THỰT -> TỰ ĐỘNG LỌC THEO TENANT (CƠ SỞ DỮ LIỆU RIÊNG)
+            const targetTid = localState.activeTenantId === 'default' ? 't-1' : localState.activeTenantId;
+            let dbTournament = regularTournaments.find((rowId: any) => rowId.id === targetTid) || null;
             if (!dbTournament) {
+              let tournamentDetailsName = DEFAULT_TOURNAMENT.name;
+              if (localState.activeTenantId !== 'default') {
+                const acc = loadedAccounts.find((a: any) => a.username === localState.activeTenantId);
+                if (acc && acc.tournamentName) {
+                  tournamentDetailsName = acc.tournamentName;
+                } else {
+                  tournamentDetailsName = `Giải Pickleball thuộc Đơn Vị ${localState.activeTenantId}`;
+                }
+              }
+
               const defaultObj = {
-                id: 't-1',
-                name: DEFAULT_TOURNAMENT.name,
-                organization: DEFAULT_TOURNAMENT.organization,
+                id: targetTid,
+                name: tournamentDetailsName,
+                organization: localState.activeTenantId === 'default' ? DEFAULT_TOURNAMENT.organization : `Ban Tổ Chức ${localState.activeTenantId}`,
                 location: DEFAULT_TOURNAMENT.location,
                 date: DEFAULT_TOURNAMENT.date,
                 settings: DEFAULT_SETTINGS,
-                current_event_id: 'event-default'
+                current_event_id: localState.activeTenantId === 'default' ? 'event-default' : `${localState.activeTenantId}__event-default`
               };
-              if (localState.isAdmin) {
+              if (localState.userRole === 'admin1' || localState.userRole === 'admin2') {
                 await supabase.from('tournament').insert([defaultObj]);
               }
               dbTournament = defaultObj;
             }
 
-            let dbEvents = eData || [];
+            // Lọc danh sách sự kiện dựa trên activeTenantId để đảm bảo sự tách biệt dữ liệu hoàn hảo
+            let dbEvents = eData ? eData.filter((evt: any) => {
+              if (localState.activeTenantId === 'default') {
+                return !evt.id.includes('__');
+              } else {
+                return evt.id.startsWith(`${localState.activeTenantId}__`);
+              }
+            }) : [];
+            
             if (dbEvents.length === 0) {
+              const defaultEvtId = localState.activeTenantId === 'default' ? 'event-default' : `${localState.activeTenantId}__event-default`;
               const defaultEvt = {
-                id: 'event-default',
+                id: defaultEvtId,
                 name: 'Đôi Nam Chuyên Nghiệp',
                 settings: DEFAULT_SETTINGS,
                 active_group_id: null,
                 advance_selection_mode: 'auto',
                 manual_qualified_team_ids: []
               };
-              if (localState.isAdmin) {
+              if (localState.userRole === 'admin1' || localState.userRole === 'admin2') {
                 await supabase.from('events').insert([defaultEvt]);
               }
               dbEvents = [defaultEvt];
             }
+
+            // Lấy tập hợp các ID sự kiện hợp lệ của Tenant này
+            const activeEventIds = new Set(dbEvents.map((evt: any) => evt.id));
+
+            // Chỉ lấy các teams, groups, matches thuộc các sự kiện hợp lệ của tenant này
+            const tenantTeams = (teamData || []).filter((t: any) => activeEventIds.has(t.event_id || t.eventId));
+            const tenantGroups = (groupData || []).filter((g: any) => activeEventIds.has(g.event_id || g.eventId));
+            const tenantMatches = (matchData || []).filter((m: any) => activeEventIds.has(m.event_id || m.eventId));
 
             // Khởi tạo cấu trúc map của events
             const eventsRecord: Record<string, EventData> = {};
@@ -1661,8 +1781,7 @@ export const useTournamentStore = create<AppState>()(
             });
 
             // Nạp thông tin Đội (teams)
-            const loadedTeams = teamData || [];
-            loadedTeams.forEach(t => {
+            tenantTeams.forEach(t => {
               const eventId = t.event_id || t.eventId;
               if (eventsRecord[eventId]) {
                 let finalGroupId = t.group_id !== undefined ? t.group_id : (t.groupId || null);
@@ -1679,8 +1798,7 @@ export const useTournamentStore = create<AppState>()(
             });
 
             // Nạp thông tin Nhóm/Bảng đấu (groups)
-            const loadedGroups = groupData || [];
-            loadedGroups.forEach(g => {
+            tenantGroups.forEach(g => {
               const eventId = g.event_id || g.eventId;
               if (eventsRecord[eventId]) {
                 let finalGroupId = g.id;
@@ -1706,8 +1824,7 @@ export const useTournamentStore = create<AppState>()(
             });
 
             // Nạp thông tin Trận đấu (matches)
-            const loadedMatches = matchData || [];
-            loadedMatches.forEach(m => {
+            tenantMatches.forEach(m => {
               const eventId = m.event_id || m.eventId;
               if (eventsRecord[eventId]) {
                 let finalGroupId = m.group_id !== undefined ? m.group_id : (m.groupId || null);

@@ -103,3 +103,11 @@ export interface EventData {
   manualQualifiedTeamIds: string[];
 }
 
+export interface Account {
+  username: string;
+  password: string;
+  displayName: string;
+  tournamentName: string;
+}
+
+
