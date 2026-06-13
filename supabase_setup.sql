@@ -10,8 +10,18 @@ DROP TABLE IF EXISTS teams CASCADE;
 DROP TABLE IF EXISTS events CASCADE;
 DROP TABLE IF EXISTS tournament CASCADE;
 DROP TABLE IF EXISTS audit_logs CASCADE;
+DROP TABLE IF EXISTS accounts CASCADE;
 
--- 2. Tạo bảng THÔNG TIN GIẢI ĐẤU (Tournament metadata)
+-- 2. Tạo bảng THÔNG TIN TÀI KHOẢN CẤP 2 (Accounts level 2 management)
+CREATE TABLE accounts (
+    username TEXT PRIMARY KEY,
+    password TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    tournament_name TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- 3. Tạo bảng THÔNG TIN GIẢI ĐẤU (Tournament metadata)
 CREATE TABLE tournament (
     id TEXT PRIMARY KEY DEFAULT 't-1',
     name TEXT NOT NULL,
@@ -93,6 +103,7 @@ ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
 
 -- Tạo các chính sách cho phép MỌI NGƯỜI (bao gồm cả role 'anon' và 'authenticated') được phép ĐỌC (SELECT)
 CREATE POLICY "Cho phép mọi người xem thông tin giải đấu" ON tournament FOR SELECT USING (true);
@@ -101,6 +112,7 @@ CREATE POLICY "Cho phép mọi người xem danh sách đội bóng" ON teams FO
 CREATE POLICY "Cho phép mọi người xem danh sách bảng đấu" ON groups FOR SELECT USING (true);
 CREATE POLICY "Cho phép mọi người xem lịch và kết quả trận" ON matches FOR SELECT USING (true);
 CREATE POLICY "Cho phép mọi người xem nhật ký hoạt động" ON audit_logs FOR SELECT USING (true);
+CREATE POLICY "Cho phép mọi người xem danh sách tài khoản" ON accounts FOR SELECT USING (true);
 
 -- Chốt chính sách cho các tác vụ thay đổi (INSERT, UPDATE, DELETE):
 -- Phương án A: Chỉ cho phép tài khoản có xác thực dịch vụ (hoặc tài khoản admin được cấp jwt)
@@ -112,5 +124,6 @@ CREATE POLICY "Cho phép ghi tự do cho anon và authenticated" ON teams FOR AL
 CREATE POLICY "Cho phép ghi tự do cho anon và authenticated" ON groups FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Cho phép ghi tự do cho anon và authenticated" ON matches FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Cho phép ghi tự do cho anon và authenticated" ON audit_logs FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Cho phép ghi tự do cho accounts" ON accounts FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 -- LƯU Ý BẢO MẬT: Sau này nếu muốn chỉ Admin dùng Supabase Auth mới sửa được, hãy đổi "TO anon, authenticated" thành "TO authenticated" cho phần ghi đè.

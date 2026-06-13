@@ -61,9 +61,59 @@ export default function App() {
   const [isLoginOpen, setIsLoginOpen] = React.useState(false);
 
   // Khởi tạo & đồng bộ dữ liệu từ Supabase trực tuyến khi khởi chạy ứng dụng
+  // tích hợp tự động nhận diện phân rã dữ liệu (Tenant ID) qua tham số Đường dẫn / Query / Hash trên URL
   useEffect(() => {
-    initSupabase();
-  }, [initSupabase]);
+    const detectTenantFromUrl = () => {
+      // 1. Quét tìm trong Query Parameters (?g=clb-ngan-son, ?tenant=..., ?id=...)
+      const searchParams = new URLSearchParams(window.location.search);
+      const qTenant = searchParams.get('g') || searchParams.get('tenant') || searchParams.get('id');
+      if (qTenant) {
+        return qTenant.trim().toLowerCase();
+      }
+
+      // 2. Quét tìm trong Hash (#/clb-ngan-son hoặc #clb-ngan-son)
+      const hash = window.location.hash;
+      if (hash) {
+        const cleanHash = hash.replace(/^#\/?/, '').trim();
+        if (cleanHash && !cleanHash.includes('/') && !['dashboard', 'teams', 'groups', 'matches', 'standings', 'knockout', 'live', 'export', 'accounts', 'logs'].includes(cleanHash)) {
+          return cleanHash.toLowerCase();
+        }
+      }
+
+      // 3. Quét tìm qua các thành phần Thư Mục (Path Segment) cuối cùng
+      const pathname = window.location.pathname;
+      const segments = pathname.split('/').filter(Boolean);
+      if (segments.length > 0) {
+        for (let i = segments.length - 1; i >= 0; i--) {
+          const seg = segments[i].toLowerCase();
+          if (
+            seg !== 'index.html' && 
+            seg !== 'dist' && 
+            seg !== 'pic_huu' && 
+            seg !== 'pic-huu' &&
+            !['dashboard', 'teams', 'groups', 'matches', 'standings', 'knockout', 'live', 'export', 'accounts', 'logs'].includes(seg)
+          ) {
+            return seg;
+          }
+        }
+      }
+      return 'default';
+    };
+
+    const processUrlTenant = async () => {
+      const detected = detectTenantFromUrl();
+      const normalizedTenant = detected.replace(/-/g, '_'); // Hỗ trợ chuyển đổi gạch ngang thành gạch dưới để khớp tên db
+      
+      if (normalizedTenant !== 'default' && normalizedTenant !== activeTenantId) {
+        console.log(`[URL] Phát hiện phân rã CSDL: ${normalizedTenant}. Đang chuyển cấu hình...`);
+        await setTenantId(normalizedTenant);
+      } else {
+        await initSupabase();
+      }
+    };
+
+    processUrlTenant();
+  }, [initSupabase, activeTenantId, setTenantId]);
 
   // Âm thầm tự động kéo dữ liệu (Polling) từ Supabase mỗi 10 giây đối với khách xem (không phải Admin)
   // để cập nhật điểm số, lịch đấu và bảng xếp hạng trực tuyến tức thì bất cứ lúc nào Admin chỉnh sửa.

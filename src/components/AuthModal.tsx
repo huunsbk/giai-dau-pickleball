@@ -145,7 +145,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                placeholder="huunsbk, admin123 hoặc nick cấp 2"
+                placeholder="Nhập tên đăng nhập"
                 autoFocus
                 className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-250 dark:border-zinc-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-zinc-900 dark:text-zinc-150 focus:bg-white focus:outline-none"
                 required
@@ -162,7 +162,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Nhập mật khẩu"
                 className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-250 dark:border-zinc-800 rounded-xl pl-9 pr-9 py-2.5 text-xs text-zinc-900 dark:text-zinc-150 focus:bg-white focus:outline-none"
                 required
               />

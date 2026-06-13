@@ -560,6 +560,18 @@ export const useTournamentStore = create<AppState>()(
         addAccount2: async (acc) => {
           const nextAccounts = [...get().accounts, acc];
           set({ accounts: nextAccounts });
+          let success = false;
+          try {
+            const { error: accError } = await supabase.from('accounts').upsert({
+              username: acc.username,
+              password: acc.password,
+              display_name: acc.displayName,
+              tournament_name: acc.tournamentName
+            });
+            if (!accError) success = true;
+          } catch (e) {
+            console.warn("Dedicated accounts table write not available:", e);
+          }
           try {
             const { error } = await supabase.from('tournament').upsert({
               id: 'accounts_config',
@@ -570,15 +582,27 @@ export const useTournamentStore = create<AppState>()(
               settings: { accounts: nextAccounts },
               current_event_id: ''
             });
-            return !error;
+            if (!error) success = true;
           } catch (e) {
             console.error(e);
-            return false;
           }
+          return success;
         },
         updateAccount2: async (acc) => {
           const nextAccounts = get().accounts.map(a => a.username === acc.username ? acc : a);
           set({ accounts: nextAccounts });
+          let success = false;
+          try {
+            const { error: accError } = await supabase.from('accounts').upsert({
+              username: acc.username,
+              password: acc.password,
+              display_name: acc.displayName,
+              tournament_name: acc.tournamentName
+            });
+            if (!accError) success = true;
+          } catch (e) {
+            console.warn("Dedicated accounts table update not available:", e);
+          }
           try {
             const { error } = await supabase.from('tournament').upsert({
               id: 'accounts_config',
@@ -589,15 +613,22 @@ export const useTournamentStore = create<AppState>()(
               settings: { accounts: nextAccounts },
               current_event_id: ''
             });
-            return !error;
+            if (!error) success = true;
           } catch (e) {
             console.error(e);
-            return false;
           }
+          return success;
         },
         deleteAccount2: async (username) => {
           const nextAccounts = get().accounts.filter(a => a.username !== username);
           set({ accounts: nextAccounts });
+          let success = false;
+          try {
+            const { error: accError } = await supabase.from('accounts').delete().eq('username', username);
+            if (!accError) success = true;
+          } catch (e) {
+            console.warn("Dedicated accounts table delete not available:", e);
+          }
           try {
             const { error } = await supabase.from('tournament').upsert({
               id: 'accounts_config',
@@ -608,11 +639,11 @@ export const useTournamentStore = create<AppState>()(
               settings: { accounts: nextAccounts },
               current_event_id: ''
             });
-            return !error;
+            if (!error) success = true;
           } catch (e) {
             console.error(e);
-            return false;
           }
+          return success;
         },
         isAdmin: false,
         setAdminStatus: (status: boolean) => {
@@ -1640,9 +1671,25 @@ export const useTournamentStore = create<AppState>()(
               throw tError;
             }
 
-            // Đồng bộ và trích xuất danh sách tài khoản cấp 2 từ dòng 'accounts_config'
-            const accountsConfigRow = (tData || []).find((row: any) => row.id === 'accounts_config');
-            const loadedAccounts: Account[] = accountsConfigRow?.settings?.accounts || [];
+            // Tải danh sách tài khoản từ bảng 'accounts' chuyên dụng, có fallback về 'accounts_config'
+            let loadedAccounts: Account[] = [];
+            try {
+              const { data: accData, error: accError } = await supabase.from('accounts').select('*');
+              if (!accError && accData && accData.length > 0) {
+                loadedAccounts = accData.map((row: any) => ({
+                  username: row.username,
+                  password: row.password,
+                  displayName: row.display_name || row.displayName,
+                  tournamentName: row.tournament_name || row.tournamentName
+                }));
+              } else {
+                const accountsConfigRow = (tData || []).find((row: any) => row.id === 'accounts_config');
+                loadedAccounts = accountsConfigRow?.settings?.accounts || [];
+              }
+            } catch (e) {
+              const accountsConfigRow = (tData || []).find((row: any) => row.id === 'accounts_config');
+              loadedAccounts = accountsConfigRow?.settings?.accounts || [];
+            }
             originalSet({ accounts: loadedAccounts });
 
             // Lọc ra các giải đấu thông thường (bỏ qua bản ghi cấu hình tài khoản)
