@@ -904,6 +904,10 @@ export default function LiveDashboard() {
                               const teamAName = currentEvt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
                               const teamBName = currentEvt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
                               const group = currentEvt.groups[m.groupId];
+                              const isKO = m.groupId === 'knockout';
+                              
+                              const pendingRank = pendingMatches.filter(x => (x.groupId === 'knockout') === isKO).findIndex(x => x.id === m.id) + 1;
+                              const absoluteIndex = evtMatches.filter(x => (x.groupId === 'knockout') === isKO).findIndex(x => x.id === m.id) + 1;
 
                               let roundClass = "border-zinc-200 dark:border-zinc-800";
                               let roundLabel = "";
@@ -920,26 +924,30 @@ export default function LiveDashboard() {
                                 else { roundClass = "border-[#4169e1] dark:border-[#3454b4]"; roundLabel = rName ? rName.toUpperCase() : `VÒNG KO ${m.round}`; }
                               }
 
-                              return (
-                                <div key={m.id} className={`flex items-center gap-3 bg-white dark:bg-zinc-950 py-2.5 px-3.5 rounded-xl border-[1.5px] ${roundClass} shadow-sm hover:opacity-90 transition-opacity`}>
-                                  <div className="w-9 h-9 rounded-full bg-[#114666] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm border border-[#0d344d]">
-                                    {m.groupId !== 'knockout' ? pendingMatches.filter(x => x.groupId !== 'knockout').findIndex(x => x.id === m.id) + 1 : pendingMatches.filter(x => x.groupId === 'knockout').findIndex(x => x.id === m.id) + 1}
-                                  </div>
-                                  <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
-                                    <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
-                                      <span className="font-bold text-zinc-850 dark:text-zinc-100 text-[14px]">{teamAName}</span>
+                                return (
+                                  <div key={m.id} className={`flex items-center gap-3 bg-white dark:bg-zinc-950 py-2.5 px-3.5 rounded-xl border-[1.5px] ${roundClass} shadow-sm hover:opacity-90 transition-opacity`}>
+                                    <div className="w-[50px] h-9 rounded-xl bg-[#114666] text-white flex flex-col items-center justify-center font-bold text-sm shrink-0 shadow-sm border border-[#0d344d]">
+                                      <span className="text-[14px] leading-none">{pendingRank}</span>
+                                      <span className="text-[8px] font-medium leading-none text-blue-200 mt-0.5">CHỜ</span>
                                     </div>
-                                    <div className="w-0.5 h-3.5 bg-orange-400 mx-2 my-1 shrink-0"></div>
-                                    <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
-                                      <span className="font-bold text-zinc-850 dark:text-zinc-100 text-[14px]">{teamBName}</span>
+                                    <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
+                                      <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
+                                        <span className="font-bold text-zinc-850 dark:text-zinc-100 text-[14px]">{teamAName}</span>
+                                      </div>
+                                      <div className="w-0.5 h-3.5 bg-orange-400 mx-2 my-1 shrink-0"></div>
+                                      <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
+                                        <span className="font-bold text-zinc-850 dark:text-zinc-100 text-[14px]">{teamBName}</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-col items-end shrink-0 pl-2">
+                                      <div className="flex gap-1.5 pb-1.5">
+                                        <span className="text-[10px] font-black tracking-wider text-white bg-zinc-600 dark:bg-zinc-700 px-2.5 py-1 rounded leading-none shadow-xs uppercase">TRẬN {absoluteIndex}</span>
+                                        <span className="text-[10px] font-bold text-zinc-500 uppercase flex items-center leading-none">{roundLabel}</span>
+                                      </div>
+                                      <span className="text-[10px] font-black tracking-wider text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-2 mt-0.5 py-1.5 rounded leading-none border border-zinc-200/50 dark:border-zinc-850 shadow-sm">CHỜ SÂN</span>
                                     </div>
                                   </div>
-                                  <div className="flex flex-col items-end shrink-0 pl-2">
-                                    <span className="text-[10px] font-bold text-zinc-500 uppercase pb-1.5">{roundLabel}</span>
-                                    <span className="text-[10px] font-black tracking-wider text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-2 py-1.5 rounded leading-none border border-zinc-200/50 dark:border-zinc-850 shadow-sm">CHỜ SÂN</span>
-                                  </div>
-                                </div>
-                              );
+                                );
                             })}
                           </AutoScrollList>
                         )}

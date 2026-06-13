@@ -1553,62 +1553,45 @@ export const useTournamentStore = create<AppState>()(
                 });
               });
 
-            } else if (size === 32) {
-              // 32 ĐỘI - Khởi tạo sơ đồ nhánh mặc định chính xác tuyệt đối như hình vẽ
+            } else if (size === 16 || size === 32) {
+              // Thuật toán chuẩn cho 16 ĐỘI (8 bảng) và 32 ĐỘI (16 bảng) 
+              // Giải quyết bài toán Nhất A vs Nhì I (32 đội), Nhất A vs Nhì E (16 đội)
               const groupsList = Object.values(groupsMap);
-              
-              // Sơ đồ chuẩn ghép cặp của 16 bảng (1 vs 9, 2 vs 10...)
-              const pairConfig = [
-                [1, 9], [2, 10], [3, 11], [4, 12], [5, 13], [6, 14], [7, 15], [8, 16],
-                [9, 1], [10, 2], [11, 3], [12, 4], [13, 5], [14, 6], [15, 7], [16, 8]
-              ];
+              const numGroups = size / 2; // 8 cho 16 đội, 16 cho 32 đội
+              const half = numGroups / 2;
 
-              for (let i = 0; i < 16; i++) {
-                const pair = pairConfig[i];
-                const idxA = (pair[0] - 1) % (groupsList.length || 1);
-                const idxB = (pair[1] - 1) % (groupsList.length || 1);
+              for (let i = 0; i < numGroups; i++) {
+                let idxA = i;
+                let idxB = i < half ? i + half : i - half;
 
-                const gA = groupsList[idxA];
-                const gB = groupsList[idxB];
+                // Tránh lỗi nếu số lượng group tạo ra chưa đủ
+                const safeIdxA = idxA % (groupsList.length || 1);
+                const safeIdxB = idxB % (groupsList.length || 1);
 
-                // Backup name nếu chưa tạo bảng
-                const defaultNameA = `Nhất Bảng ${pair[0]}`;
-                const defaultNameB = `Nhì Bảng ${pair[1]}`;
+                const gA = groupsList[safeIdxA];
+                const gB = groupsList[safeIdxB];
 
-                const placeholderA = gA
-                  ? getRealTeamOrPlaceholder(gA.name, 1, `Nhất Bảng ${pair[0]}`)
-                  : defaultNameA;
+                const groupNameA = gA ? gA.name : String.fromCharCode(65 + idxA);
+                const groupNameB = gB ? gB.name : String.fromCharCode(65 + idxB);
 
-                const placeholderB = gB
-                  ? getRealTeamOrPlaceholder(gB.name, 2, `Nhì Bảng ${pair[1]}`)
-                  : defaultNameB;
-
-                advList.push(
-                  { label: `Trân ${i + 1}-A`, placeholder: placeholderA },
-                  { label: `Trận ${i + 1}-B`, placeholder: placeholderB }
-                );
-              }
-            } else {
-              // 16 ĐỘI
-              // Nhất A, Nhì B, Nhất C, Nhì D, v.v.
-              const groupsList = Object.values(groupsMap);
-              for (let i = 0; i < 8; i++) {
-                const gA = groupsList[i % groupsList.length];
-                const gB = groupsList[(i + 1) % groupsList.length];
+                const defaultNameA = `Nhất ${groupNameA}`;
+                const defaultNameB = `Nhì ${groupNameB}`;
 
                 const placeholderA = gA 
-                  ? getRealTeamOrPlaceholder(gA.name, 1, `Nhất ${gA.name}`) 
-                  : `Nhất Bảng ${String.fromCharCode(65 + i)}`;
+                  ? getRealTeamOrPlaceholder(gA.name, 1, defaultNameA) 
+                  : defaultNameA;
 
                 const placeholderB = gB 
-                  ? getRealTeamOrPlaceholder(gB.name, 2, `Nhì ${gB.name}`) 
-                  : `Nhì Bảng ${String.fromCharCode(66 + i)}`;
+                  ? getRealTeamOrPlaceholder(gB.name, 2, defaultNameB) 
+                  : defaultNameB;
 
                 advList.push(
                   { label: `Trận ${i+1}-A`, placeholder: placeholderA },
                   { label: `Trận ${i+1}-B`, placeholder: placeholderB }
                 );
               }
+            } else {
+              // 24 Teams or other...
             }
           }
 
