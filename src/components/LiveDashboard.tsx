@@ -794,221 +794,30 @@ export default function LiveDashboard() {
             const finishedMatches = evtMatches.filter((m) => m.status === 'finished').slice(-10);
 
             return (
-              <>
-                {/* Tabs chuyển slide thủ công cho Event riêng lẻ */}
-                <div className="flex bg-zinc-100 dark:bg-zinc-950 p-1 rounded-2xl border border-zinc-200/40 dark:border-zinc-850">
-                  {(['standings', 'matches', 'bracket'] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => {
-                        setActiveCycleTab(tab);
-                        setIsPlaying(false);
-                      }}
-                      className={`flex-1 py-3 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                        activeCycleTab === tab
-                          ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs'
-                          : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-204'
-                      }`}
-                    >
-                      {tab === 'standings' ? 'Bảng Xếp Hạng Vòng Bảng' : tab === 'matches' ? 'Tiến Độ Trận Đấu' : 'Sơ đồ Knockout'}
-                    </button>
-                  ))}
+              <div 
+                className="py-2 animate-fade-in relative block bg-white dark:bg-zinc-950 rounded-3xl" 
+                id={`bracket-fullscreen-${currentEvt.id}`}
+              >
+                <div className="absolute top-4 right-4 z-50">
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById(`bracket-fullscreen-${currentEvt.id}`);
+                      if (el) {
+                        if (!document.fullscreenElement) {
+                          el.requestFullscreen().catch(()=>{});
+                        } else {
+                          document.exitFullscreen().catch(()=>{});
+                        }
+                      }
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-sm border border-zinc-200 dark:border-zinc-700 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-sm transition-all"
+                  >
+                    <Maximize size={16} />
+                    <span className="text-xs font-bold leading-none">Toàn màn hình</span>
+                  </button>
                 </div>
-
-                {/* Nội dung chi tiết */}
-                <div className="py-2 animate-fade-in">
-                  {activeCycleTab === 'standings' && (
-                    <div className="space-y-8">
-                      {evtGroups.length === 0 ? (
-                        <div className="py-20 text-center text-zinc-500 border border-dashed border-zinc-200 rounded-3xl bg-zinc-50/50">Chưa bốc bảng thi đấu.</div>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {evtGroups.map((group) => {
-                            const std = stdByGrp[group.id] || [];
-                            return (
-                              <div key={group.id} className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
-                                <div className="bg-blue-600 text-white p-4 flex items-center justify-between">
-                                  <span className="text-sm font-extrabold flex items-center gap-2 tracking-tight uppercase">
-                                    <Award size={17} />
-                                    Bảng xếp hạng hiện tại - {group.name}
-                                  </span>
-                                  <span className="text-[10px] font-bold bg-white/20 px-2.5 py-1 rounded-full border border-white/20 select-none hidden sm:inline-block">
-                                    Bảng {group.teamIds?.length || std.length} đội
-                                  </span>
-                                </div>
-
-                                <div className="overflow-x-auto">
-                                  <table className="w-full text-left text-xs min-w-[400px]">
-                                    <thead>
-                                      <tr className="bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 font-bold">
-                                        <th className="py-3 px-3 text-center w-12">Hạng</th>
-                                        <th className="py-3 px-3 text-left">Đội tuyển</th>
-                                        <th className="py-3 px-2.5 text-center">Trận</th>
-                                        <th className="py-3 px-2.5 text-center text-emerald-600">T</th>
-                                        <th className="py-3 px-2.5 text-center text-red-500">B</th>
-                                        <th className="py-3 px-2.5 text-center text-zinc-500">H/S</th>
-                                        <th className="py-3 px-3 text-center text-blue-600">Điểm</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {std.map((s, index) => {
-                                        let rankBadge = null;
-                                        if (index === 0) {
-                                          rankBadge = <span className="w-6 h-6 rounded-full inline-flex items-center justify-center font-bold text-xs bg-amber-100 text-amber-800 border border-amber-200/40">1</span>;
-                                        } else if (index === 1) {
-                                          rankBadge = <span className="w-6 h-6 rounded-full inline-flex items-center justify-center font-bold text-xs bg-zinc-150 text-zinc-700 border border-zinc-200/40">2</span>;
-                                        } else {
-                                          rankBadge = <span className="text-zinc-400 font-bold w-6 text-center block">{index + 1}</span>;
-                                        }
-
-                                        return (
-                                          <tr key={s.teamId} className="border-b border-zinc-100 dark:border-zinc-850/60 hover:bg-zinc-50/50 dark:hover:bg-zinc-850/10 transition-colors">
-                                            <td className="py-3.5 px-3 text-center font-bold">
-                                              <span className="flex justify-center items-center">{rankBadge}</span>
-                                            </td>
-                                            <td className="py-3.5 px-3 font-extrabold text-zinc-700 dark:text-zinc-300 text-sm truncate max-w-[150px]">{s.teamName}</td>
-                                            <td className="py-3.5 px-2.5 text-center text-zinc-600 dark:text-zinc-400 font-medium">{s.matchesPlayed}</td>
-                                            <td className="py-3.5 px-2.5 text-center text-emerald-600 font-bold">{s.matchesWon}</td>
-                                            <td className="py-3.5 px-2.5 text-center text-red-500 font-bold">{s.matchesLost}</td>
-                                            <td className="py-3.5 px-2.5 text-center text-zinc-500 font-medium">{s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff === 0 ? 'Ø' : s.pointDiff}</td>
-                                            <td className="py-3.5 px-3 text-center font-black text-blue-600 text-base">{s.points}</td>
-                                          </tr>
-                                        );
-                                      })}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {activeCycleTab === 'matches' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Trận đấu sắp diễn ra */}
-                      <div className="space-y-2">
-                        <h4 className="text-xs font-extrabold text-zinc-400 flex items-center gap-2 uppercase tracking-wider">
-                          <Clock size={14} /> TRẬN ĐẤU SẮP DIỄN RA ({currentEvt.name})
-                        </h4>
-
-                        {pendingMatches.length === 0 ? (
-                          <div className="py-8 text-center text-xs text-zinc-400 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800 select-none">
-                            Hoàn tất toàn bộ lịch vòng bảng này!
-                          </div>
-                        ) : (
-                          <AutoScrollList maxHeight="400px" className="space-y-1 pr-1">
-                            {pendingMatches.map((m, idx) => {
-                              const teamAName = currentEvt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
-                              const teamBName = currentEvt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
-                              const group = currentEvt.groups[m.groupId];
-                              const isKO = m.groupId === 'knockout';
-                              
-                              const pendingRank = pendingMatches.filter(x => (x.groupId === 'knockout') === isKO).findIndex(x => x.id === m.id) + 1;
-                              const absoluteIndex = evtMatches.filter(x => (x.groupId === 'knockout') === isKO).findIndex(x => x.id === m.id) + 1;
-
-                              let roundClass = "border-zinc-200 dark:border-zinc-800";
-                              let roundLabel = "";
-                              if (group) {
-                                roundClass = "border-[#5b9e38] dark:border-[#4c842f]";
-                                roundLabel = `BẢNG ${group.name}`;
-                              } else {
-                                const rName = (m.knockoutRoundName || "").toLowerCase();
-                                if (rName.includes("32")) { roundClass = "border-[#20b2aa] dark:border-[#1a8e88]"; roundLabel = "VÒNG 32"; }
-                                else if (rName.includes("16")) { roundClass = "border-[#3cb371] dark:border-[#308f5a]"; roundLabel = "VÒNG 16"; }
-                                else if (rName.includes("tứ kết")) { roundClass = "border-[#9370db] dark:border-[#7559af]"; roundLabel = "TỨ KẾT"; }
-                                else if (rName.includes("bán kết")) { roundClass = "border-[#ff8c00] dark:border-[#cc7000]"; roundLabel = "BÁN KẾT"; }
-                                else if (rName.includes("chung kết")) { roundClass = "border-[#dc143c] dark:border-[#b01030]"; roundLabel = "CHUNG KẾT"; }
-                                else { roundClass = "border-[#4169e1] dark:border-[#3454b4]"; roundLabel = rName ? rName.toUpperCase() : `VÒNG KO ${m.round}`; }
-                              }
-
-                                return (
-                                  <div key={m.id} className={`flex items-center gap-3 bg-white dark:bg-zinc-950 py-2.5 px-3.5 rounded-xl border-[1.5px] ${roundClass} shadow-sm hover:opacity-90 transition-opacity`}>
-                                    <div className="w-[50px] h-9 rounded-xl bg-[#114666] text-white flex flex-col items-center justify-center font-bold text-sm shrink-0 shadow-sm border border-[#0d344d]">
-                                      <span className="text-[14px] leading-none">{pendingRank}</span>
-                                      <span className="text-[8px] font-medium leading-none text-blue-200 mt-0.5">CHỜ</span>
-                                    </div>
-                                    <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
-                                      <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
-                                        <span className="font-bold text-zinc-850 dark:text-zinc-100 text-[14px]">{teamAName}</span>
-                                      </div>
-                                      <div className="w-0.5 h-3.5 bg-orange-400 mx-2 my-1 shrink-0"></div>
-                                      <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
-                                        <span className="font-bold text-zinc-850 dark:text-zinc-100 text-[14px]">{teamBName}</span>
-                                      </div>
-                                    </div>
-                                    <div className="flex flex-col items-end shrink-0 pl-2">
-                                      <div className="flex gap-1.5 pb-1.5">
-                                        <span className="text-[10px] font-black tracking-wider text-white bg-zinc-600 dark:bg-zinc-700 px-2.5 py-1 rounded leading-none shadow-xs uppercase">TRẬN {absoluteIndex}</span>
-                                        <span className="text-[10px] font-bold text-zinc-500 uppercase flex items-center leading-none">{roundLabel}</span>
-                                      </div>
-                                      <span className="text-[10px] font-black tracking-wider text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-2 mt-0.5 py-1.5 rounded leading-none border border-zinc-200/50 dark:border-zinc-850 shadow-sm">CHỜ SÂN</span>
-                                    </div>
-                                  </div>
-                                );
-                            })}
-                          </AutoScrollList>
-                        )}
-                      </div>
-
-                      {/* Trận đấu mới kết thúc */}
-                      <div className="space-y-2">
-                        <h4 className="text-xs font-extrabold text-emerald-600 dark:text-emerald-450 flex items-center gap-2 uppercase tracking-wider">
-                          <Award size={14} /> TRẬN ĐẤU MỚI KẾT THÚC ({currentEvt.name})
-                        </h4>
-
-                        {finishedMatches.length === 0 ? (
-                          <div className="py-8 text-center text-xs text-zinc-400 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
-                            Chưa có trận nào hoàn tất ghi nhận tỉ số.
-                          </div>
-                        ) : (
-                          <AutoScrollList maxHeight="400px" className="space-y-1 pr-1">
-                            {finishedMatches.map((m) => {
-                              const teamAName = currentEvt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
-                              const teamBName = currentEvt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
-                              const group = currentEvt.groups[m.groupId];
-
-                              return (
-                                <div key={m.id} className="py-1.5 px-3.5 bg-emerald-550/[0.01] rounded-lg border border-emerald-100 dark:border-emerald-900/10 flex items-center justify-between shadow-xs">
-                                  <div className="space-y-1 max-w-[70%] flex-1 pr-2">
-                                    <div className="flex flex-col">
-                                      <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
-                                        <span className="text-[13.5px] font-bold text-zinc-850 dark:text-zinc-100">
-                                          {teamAName}
-                                        </span>
-                                      </div>
-                                      <div className="w-0.5 h-3 bg-orange-400 mx-2 my-0.5"></div>
-                                      <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 pb-0.5">
-                                        <span className="text-[13.5px] font-bold text-zinc-850 dark:text-zinc-100">
-                                          {teamBName}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <span className="inline-block py-0.5 px-1.5 bg-emerald-50 text-emerald-805 dark:bg-emerald-950/20 dark:text-emerald-350 font-bold rounded text-[9.5px]">
-                                      {group ? group.name : 'Knockout'} - Vòng {m.round}
-                                    </span>
-                                  </div>
-                                  <span className="font-mono font-black text-[14px] text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2 py-1.5 rounded shrink-0 leading-none">
-                                    {m.scoreA} - {m.scoreB}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </AutoScrollList>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {activeCycleTab === 'bracket' && (
-                    <div id="live-bracket-slide">
-                      <LiveBracket koMatches={koMatches} currentEvt={currentEvt} />
-                    </div>
-                  )}
-                </div>
-              </>
+                <LiveBracket koMatches={koMatches} currentEvt={currentEvt} />
+              </div>
             );
           })()}
         </div>
