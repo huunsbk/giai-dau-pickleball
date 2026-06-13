@@ -657,17 +657,40 @@ export default function LiveDashboard() {
                           {pendingMatches.length > 0 && (
                             <div className="space-y-1">
                               <h5 className="text-[9px] font-bold text-amber-500 uppercase tracking-wider" style={{ fontSize: '13px' }}>Trận Đang / Sắp diễn ra</h5>
-                              {pendingMatches.map((m) => {
+                              {pendingMatches.map((m, idx) => {
                                 const teamA = evt.teams[m.teamAId]?.name || m.teamAId;
                                 const teamB = evt.teams[m.teamBId]?.name || m.teamBId;
+                                const group = evt.groups[m.groupId];
+                                
+                                let roundClass = "border-zinc-200 dark:border-zinc-800";
+                                let roundLabel = "";
+                                if (group) {
+                                  roundClass = "border-[#5b9e38] dark:border-[#4c842f]"; // Green for group stage
+                                  roundLabel = `BẢNG ${group.name}`;
+                                } else {
+                                  const rName = (m.knockoutRoundName || "").toLowerCase();
+                                  if (rName.includes("32")) { roundClass = "border-[#20b2aa] dark:border-[#1a8e88]"; roundLabel = "VÒNG 32"; }
+                                  else if (rName.includes("16")) { roundClass = "border-[#3cb371] dark:border-[#308f5a]"; roundLabel = "VÒNG 16"; }
+                                  else if (rName.includes("tứ kết")) { roundClass = "border-[#9370db] dark:border-[#7559af]"; roundLabel = "TỨ KẾT"; }
+                                  else if (rName.includes("bán kết")) { roundClass = "border-[#ff8c00] dark:border-[#cc7000]"; roundLabel = "BÁN KẾT"; }
+                                  else if (rName.includes("chung kết")) { roundClass = "border-[#dc143c] dark:border-[#b01030]"; roundLabel = "CHUNG KẾT"; }
+                                  else { roundClass = "border-[#4169e1] dark:border-[#3454b4]"; roundLabel = rName ? rName.toUpperCase() : `VÒNG KO ${m.round}`; }
+                                }
+
                                 return (
-                                  <div key={m.id} className="flex justify-between items-center bg-white dark:bg-zinc-950 py-1.5 px-3 rounded-lg border border-zinc-100 dark:border-zinc-850 text-[11px]">
-                                    <div className="flex flex-col flex-1 pr-2 overflow-hidden">
+                                  <div key={m.id} className={`flex items-center gap-2 bg-white dark:bg-zinc-950 py-1.5 px-2 rounded-lg border-[1.5px] ${roundClass} text-[11px]`}>
+                                    <div className="w-6 h-6 rounded-full bg-[#114666] text-white flex items-center justify-center font-bold shrink-0 shadow-sm border border-[#0d344d]">
+                                      {idx + 1}
+                                    </div>
+                                    <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
                                       <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate" style={{ fontSize: '13px' }}>{teamA}</span>
                                       <div className="w-0.5 h-2.5 bg-orange-400 mx-2 my-0.5"></div>
                                       <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate" style={{ fontSize: '13px' }}>{teamB}</span>
                                     </div>
-                                    <span className="text-[9px] font-bold text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-1.5 py-1 rounded leading-none shrink-0 border border-zinc-200/50 dark:border-zinc-850">CHỜ</span>
+                                    <div className="flex flex-col items-end shrink-0">
+                                      <span className="text-[7.5px] font-bold text-zinc-500 uppercase pb-0.5">{roundLabel}</span>
+                                      <span className="text-[9px] font-bold text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-1.5 py-1 rounded leading-none shrink-0 border border-zinc-200/50 dark:border-zinc-850 shadow-sm">CHỜ</span>
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -868,28 +891,40 @@ export default function LiveDashboard() {
                           </div>
                         ) : (
                           <AutoScrollList maxHeight="400px" className="space-y-1 pr-1">
-                            {pendingMatches.map((m) => {
+                            {pendingMatches.map((m, idx) => {
                               const teamAName = currentEvt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
                               const teamBName = currentEvt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
                               const group = currentEvt.groups[m.groupId];
 
+                              let roundClass = "border-zinc-200 dark:border-zinc-800";
+                              let roundLabel = "";
+                              if (group) {
+                                roundClass = "border-[#5b9e38] dark:border-[#4c842f]";
+                                roundLabel = `BẢNG ${group.name}`;
+                              } else {
+                                const rName = (m.knockoutRoundName || "").toLowerCase();
+                                if (rName.includes("32")) { roundClass = "border-[#20b2aa] dark:border-[#1a8e88]"; roundLabel = "VÒNG 32"; }
+                                else if (rName.includes("16")) { roundClass = "border-[#3cb371] dark:border-[#308f5a]"; roundLabel = "VÒNG 16"; }
+                                else if (rName.includes("tứ kết")) { roundClass = "border-[#9370db] dark:border-[#7559af]"; roundLabel = "TỨ KẾT"; }
+                                else if (rName.includes("bán kết")) { roundClass = "border-[#ff8c00] dark:border-[#cc7000]"; roundLabel = "BÁN KẾT"; }
+                                else if (rName.includes("chung kết")) { roundClass = "border-[#dc143c] dark:border-[#b01030]"; roundLabel = "CHUNG KẾT"; }
+                                else { roundClass = "border-[#4169e1] dark:border-[#3454b4]"; roundLabel = rName ? rName.toUpperCase() : `VÒNG KO ${m.round}`; }
+                              }
+
                               return (
-                                <div key={m.id} className="py-1.5 px-3.5 bg-zinc-50 dark:bg-zinc-950 rounded-lg border border-zinc-150 dark:border-zinc-850 flex items-center justify-between shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
-                                  <div className="space-y-1 max-w-[70%] flex-1 pr-2">
-                                    <div className="flex flex-col">
-                                      <p className="text-[13.5px] font-bold text-zinc-850 dark:text-zinc-100 truncate">
-                                        {teamAName}
-                                      </p>
-                                      <div className="w-0.5 h-3 bg-orange-400 mx-2 my-0.5"></div>
-                                      <p className="text-[13.5px] font-bold text-zinc-850 dark:text-zinc-100 truncate">
-                                        {teamBName}
-                                      </p>
-                                    </div>
-                                    <span className="inline-block py-0.5 px-1.5 bg-blue-50 text-blue-805 dark:bg-blue-950/20 dark:text-blue-300 font-bold rounded text-[9.5px]">
-                                      {group ? group.name : 'Knockout'} - Vòng {m.round}
-                                    </span>
+                                <div key={m.id} className={`flex items-center gap-3 bg-white dark:bg-zinc-950 py-2.5 px-3.5 rounded-xl border-[1.5px] ${roundClass} shadow-sm hover:opacity-90 transition-opacity`}>
+                                  <div className="w-9 h-9 rounded-full bg-[#114666] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm border border-[#0d344d]">
+                                    {idx + 1}
                                   </div>
-                                  <span className="text-[10px] py-1.5 px-2 bg-zinc-100 dark:bg-zinc-900 rounded font-black text-zinc-500 shrink-0 select-none tracking-wider">CHỜ SÂN</span>
+                                  <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
+                                    <span className="font-bold text-zinc-850 dark:text-zinc-100 truncate text-[14px]">{teamAName}</span>
+                                    <div className="w-0.5 h-3.5 bg-orange-400 mx-2 my-1"></div>
+                                    <span className="font-bold text-zinc-850 dark:text-zinc-100 truncate text-[14px]">{teamBName}</span>
+                                  </div>
+                                  <div className="flex flex-col items-end shrink-0 pl-2">
+                                    <span className="text-[10px] font-bold text-zinc-500 uppercase pb-1.5">{roundLabel}</span>
+                                    <span className="text-[10px] font-black tracking-wider text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-2 py-1.5 rounded leading-none border border-zinc-200/50 dark:border-zinc-850 shadow-sm">CHỜ SÂN</span>
+                                  </div>
                                 </div>
                               );
                             })}
