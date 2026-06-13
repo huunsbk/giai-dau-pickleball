@@ -766,11 +766,6 @@ export const useTournamentStore = create<AppState>()(
           if (!get().isAdmin) return;
           const event = get().events[id];
           if (!event) return;
-          
-          const eventKeys = Object.keys(get().events);
-          if (eventKeys.length <= 1) {
-            return;
-          }
 
           set((state) => {
             const nextEvents = { ...state.events };
@@ -778,12 +773,16 @@ export const useTournamentStore = create<AppState>()(
             
             let nextActiveId = state.currentEventId;
             if (state.currentEventId === id) {
-              nextActiveId = Object.keys(nextEvents)[0];
+              const keys = Object.keys(nextEvents);
+              nextActiveId = keys.length > 0 ? keys[0] : '';
             }
+            
+            const isLast = Object.keys(nextEvents).length === 0;
             
             return {
               events: nextEvents,
-              currentEventId: nextActiveId
+              currentEventId: nextActiveId,
+              ...(isLast ? { teams: {}, groups: {}, matches: [], activeGroupId: null } : {})
             };
           });
           logToStore('Nội Dung', `Xóa nội dung thi đấu: "${event.name}"`);
@@ -817,6 +816,9 @@ export const useTournamentStore = create<AppState>()(
         addTeam: (name, seed) => {
           if (!get().isAdmin) {
             return { success: false, message: 'Yêu cầu quyền Admin để thêm đội.' };
+          }
+          if (!get().currentEventId) {
+            return { success: false, message: 'Không có nội dung thi đấu nào được chọn. Vui lòng tạo Nội dung mới trước.' };
           }
           const trimmedName = name.trim();
           if (!trimmedName) {
@@ -1869,6 +1871,7 @@ export const useTournamentStore = create<AppState>()(
             // TÌNH HUỐNG 2: SUPABASE ĐÃ CÓ VỀ HOẶC CẦN KHỞI TẠO NỘI DUNG RIÊNG CHO TENANT
             const targetTid = localState.activeTenantId === 'default' ? 't-1' : localState.activeTenantId;
             let dbTournament = regularTournaments.find((rowId: any) => rowId.id === targetTid) || null;
+            const isFirstTime = !dbTournament;
             if (!dbTournament) {
               let tournamentDetailsName = DEFAULT_TOURNAMENT.name;
               if (localState.activeTenantId !== 'default') {
@@ -1904,7 +1907,7 @@ export const useTournamentStore = create<AppState>()(
               }
             }) : [];
             
-            if (dbEvents.length === 0) {
+            if (dbEvents.length === 0 && isFirstTime) {
               const defaultEvtId = localState.activeTenantId === 'default' ? 'event-default' : `${localState.activeTenantId}__event-default`;
               const defaultEvt = {
                 id: defaultEvtId,
@@ -2027,18 +2030,22 @@ export const useTournamentStore = create<AppState>()(
             });
 
             // Thiết lập sự kiện hiện tại
-            const currentEventId = dbTournament.current_event_id || dbTournament.currentEventId || 'event-default';
-            const activeEvent = eventsRecord[currentEventId] || Object.values(eventsRecord)[0] || {
-              id: 'event-default',
-              name: 'Đôi Nam Chuyên Nghiệp',
-              settings: DEFAULT_SETTINGS,
-              activeGroupId: null,
-              advanceSelectionMode: 'auto',
-              manualQualifiedTeamIds: [],
-              teams: {},
-              groups: {},
-              matches: []
-            };
+            let currentEventId = dbTournament.current_event_id || dbTournament.currentEventId || '';
+            let activeEvent = eventsRecord[currentEventId] || Object.values(eventsRecord)[0];
+            
+            if (!activeEvent) {
+              activeEvent = {
+                id: '',
+                name: '',
+                settings: DEFAULT_SETTINGS,
+                activeGroupId: null,
+                advanceSelectionMode: 'auto',
+                manualQualifiedTeamIds: [],
+                teams: {},
+                groups: {},
+                matches: []
+              };
+            }
 
             const tournamentState: Tournament = {
               id: dbTournament.id,
@@ -2046,7 +2053,7 @@ export const useTournamentStore = create<AppState>()(
               organization: dbTournament.organization,
               location: dbTournament.location,
               date: dbTournament.date,
-              settings: activeEvent.settings || dbTournament.settings || DEFAULT_SETTINGS
+              settings: activeEvent.id ? (activeEvent.settings || dbTournament.settings || DEFAULT_SETTINGS) : (dbTournament.settings || DEFAULT_SETTINGS)
             };
 
             const logsState: AuditLog[] = (logData || []).map(l => ({

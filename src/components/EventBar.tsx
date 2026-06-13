@@ -159,20 +159,18 @@ export default function EventBar() {
                       >
                         <Edit3 size={11} />
                       </button>
-                      {eventList.length > 1 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeletingId(evt.id);
-                          }}
-                          className={`p-0.5 rounded transition-colors ${
-                            isActive ? 'hover:bg-red-700 text-red-200' : 'hover:bg-red-50 dark:hover:bg-red-955/20 text-red-550'
-                          }`}
-                          title="Xóa nội dung"
-                        >
-                          <Trash2 size={11} />
-                        </button>
-                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingId(evt.id);
+                        }}
+                        className={`p-0.5 rounded transition-colors ${
+                          isActive ? 'hover:bg-red-700 text-red-200' : 'hover:bg-red-50 dark:hover:bg-red-955/20 text-red-550'
+                        }`}
+                        title="Xóa nội dung"
+                      >
+                        <Trash2 size={11} />
+                      </button>
                     </div>
                   )}
                 </motion.div>
