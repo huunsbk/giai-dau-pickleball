@@ -661,9 +661,13 @@ export default function LiveDashboard() {
                                 const teamA = evt.teams[m.teamAId]?.name || m.teamAId;
                                 const teamB = evt.teams[m.teamBId]?.name || m.teamBId;
                                 return (
-                                  <div key={m.id} className="flex justify-between items-center bg-white dark:bg-zinc-950 py-1 px-3 rounded-lg border border-zinc-100 dark:border-zinc-850 text-[11px]">
-                                    <span className="font-semibold text-zinc-700 dark:text-zinc-300 truncate max-w-[80%]" style={{ fontSize: '14px', color: '#010104' }}>{teamA} vs {teamB}</span>
-                                    <span className="text-[9px] font-bold text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-1 py-0.5 rounded leading-none shrink-0 border border-zinc-200/50 dark:border-zinc-850">CHỜ</span>
+                                  <div key={m.id} className="flex justify-between items-center bg-white dark:bg-zinc-950 py-1.5 px-3 rounded-lg border border-zinc-100 dark:border-zinc-850 text-[11px]">
+                                    <div className="flex flex-col flex-1 pr-2 overflow-hidden">
+                                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate" style={{ fontSize: '13px' }}>{teamA}</span>
+                                      <div className="w-0.5 h-2.5 bg-orange-400 mx-2 my-0.5"></div>
+                                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate" style={{ fontSize: '13px' }}>{teamB}</span>
+                                    </div>
+                                    <span className="text-[9px] font-bold text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-1.5 py-1 rounded leading-none shrink-0 border border-zinc-200/50 dark:border-zinc-850">CHỜ</span>
                                   </div>
                                 );
                               })}
@@ -677,9 +681,13 @@ export default function LiveDashboard() {
                                 const teamA = evt.teams[m.teamAId]?.name || m.teamAId;
                                 const teamB = evt.teams[m.teamBId]?.name || m.teamBId;
                                 return (
-                                  <div key={m.id} className="flex justify-between items-center bg-emerald-500/[0.02] py-1 px-3 rounded-lg border border-emerald-100/55 dark:border-emerald-900/10 text-[11px]">
-                                    <span className="font-semibold text-zinc-700 dark:text-zinc-300 truncate max-w-[70%]">{teamA} vs {teamB}</span>
-                                    <strong className="font-mono font-black text-emerald-600 leading-none bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded shrink-0">{m.scoreA} - {m.scoreB}</strong>
+                                  <div key={m.id} className="flex justify-between items-center bg-emerald-500/[0.02] py-1.5 px-3 rounded-lg border border-emerald-100/55 dark:border-emerald-900/10 text-[11px]">
+                                    <div className="flex flex-col flex-1 pr-2 overflow-hidden">
+                                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate" style={{ fontSize: '13px' }}>{teamA}</span>
+                                      <div className="w-0.5 h-2.5 bg-orange-400 mx-2 my-0.5"></div>
+                                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate" style={{ fontSize: '13px' }}>{teamB}</span>
+                                    </div>
+                                    <strong className="font-mono font-black text-emerald-600 text-[13px] leading-none bg-emerald-50 dark:bg-emerald-950 px-2.5 py-1.5 rounded shrink-0">{m.scoreA} - {m.scoreB}</strong>
                                   </div>
                                 );
                               })}
@@ -866,16 +874,22 @@ export default function LiveDashboard() {
                               const group = currentEvt.groups[m.groupId];
 
                               return (
-                                <div key={m.id} className="py-1 px-3.5 bg-zinc-50 dark:bg-zinc-950 rounded-lg border border-zinc-150 dark:border-zinc-850 flex items-center justify-between shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
-                                  <div className="space-y-0.5 max-w-[70%]">
-                                    <p className="text-xs font-bold text-zinc-850 dark:text-zinc-100 truncate">
-                                      {teamAName} <span className="text-zinc-400 font-normal">vs</span> {teamBName}
-                                    </p>
-                                    <span className="inline-block py-0.5 px-1.5 bg-blue-50 text-blue-805 dark:bg-blue-950/20 dark:text-blue-300 font-bold rounded text-[8.5px]">
+                                <div key={m.id} className="py-1.5 px-3.5 bg-zinc-50 dark:bg-zinc-950 rounded-lg border border-zinc-150 dark:border-zinc-850 flex items-center justify-between shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
+                                  <div className="space-y-1 max-w-[70%] flex-1 pr-2">
+                                    <div className="flex flex-col">
+                                      <p className="text-[13.5px] font-bold text-zinc-850 dark:text-zinc-100 truncate">
+                                        {teamAName}
+                                      </p>
+                                      <div className="w-0.5 h-3 bg-orange-400 mx-2 my-0.5"></div>
+                                      <p className="text-[13.5px] font-bold text-zinc-850 dark:text-zinc-100 truncate">
+                                        {teamBName}
+                                      </p>
+                                    </div>
+                                    <span className="inline-block py-0.5 px-1.5 bg-blue-50 text-blue-805 dark:bg-blue-950/20 dark:text-blue-300 font-bold rounded text-[9.5px]">
                                       {group ? group.name : 'Knockout'} - Vòng {m.round}
                                     </span>
                                   </div>
-                                  <span className="text-[9.5px] font-black text-zinc-405 shrink-0 select-none tracking-wider">CHỜ SÂN</span>
+                                  <span className="text-[10px] py-1.5 px-2 bg-zinc-100 dark:bg-zinc-900 rounded font-black text-zinc-500 shrink-0 select-none tracking-wider">CHỜ SÂN</span>
                                 </div>
                               );
                             })}
@@ -901,16 +915,22 @@ export default function LiveDashboard() {
                               const group = currentEvt.groups[m.groupId];
 
                               return (
-                                <div key={m.id} className="py-1 px-3.5 bg-emerald-550/[0.01] rounded-lg border border-emerald-100 dark:border-emerald-900/10 flex items-center justify-between shadow-xs">
-                                  <div className="space-y-0.5 max-w-[70%]">
-                                    <p className="text-xs font-bold text-zinc-850 dark:text-zinc-100 truncate">
-                                      {teamAName} <span className="text-zinc-400 font-normal">vs</span> {teamBName}
-                                    </p>
-                                    <span className="inline-block py-0.5 px-1.5 bg-emerald-50 text-emerald-805 dark:bg-emerald-950/20 dark:text-emerald-350 font-bold rounded text-[8.5px]">
+                                <div key={m.id} className="py-1.5 px-3.5 bg-emerald-550/[0.01] rounded-lg border border-emerald-100 dark:border-emerald-900/10 flex items-center justify-between shadow-xs">
+                                  <div className="space-y-1 max-w-[70%] flex-1 pr-2">
+                                    <div className="flex flex-col">
+                                      <p className="text-[13.5px] font-bold text-zinc-850 dark:text-zinc-100 truncate">
+                                        {teamAName}
+                                      </p>
+                                      <div className="w-0.5 h-3 bg-orange-400 mx-2 my-0.5"></div>
+                                      <p className="text-[13.5px] font-bold text-zinc-850 dark:text-zinc-100 truncate">
+                                        {teamBName}
+                                      </p>
+                                    </div>
+                                    <span className="inline-block py-0.5 px-1.5 bg-emerald-50 text-emerald-805 dark:bg-emerald-950/20 dark:text-emerald-350 font-bold rounded text-[9.5px]">
                                       {group ? group.name : 'Knockout'} - Vòng {m.round}
                                     </span>
                                   </div>
-                                  <span className="font-mono font-black text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded shrink-0 leading-none">
+                                  <span className="font-mono font-black text-[14px] text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2 py-1.5 rounded shrink-0 leading-none">
                                     {m.scoreA} - {m.scoreB}
                                   </span>
                                 </div>
