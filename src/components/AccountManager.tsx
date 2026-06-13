@@ -15,7 +15,9 @@ import {
   Info, 
   Trophy,
   RefreshCw,
-  Search
+  Search,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 
 export default function AccountManager() {
@@ -43,6 +45,13 @@ export default function AccountManager() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,7 +89,8 @@ export default function AccountManager() {
 
     setIsSyncing(false);
     if (success) {
-      setSuccessMsg(`Đã tạo thành công tài khoản cấp 2 cho đơn vị "${trimmedDisplay}".`);
+      const slugUser = trimmedUsername.replace(/_/g, '-');
+      setSuccessMsg(`Đã tạo thành công tài khoản cấp 2 cho đơn vị "${trimmedDisplay}". Đường dẫn xem giải: https://huunsbk.github.io/PIC_HUU/${slugUser}`);
       setUsername('');
       setPassword('');
       setDisplayName('');
@@ -317,12 +327,29 @@ export default function AccountManager() {
                     <th className="py-2.5 px-3">Mật khẩu</th>
                     <th className="py-2.5 px-3">Tên đơn vị quản lý</th>
                     <th className="py-2.5 px-3">Giải đấu liên kết</th>
+                    <th className="py-2.5 px-3">Đường dẫn xem giải (Khán giả)</th>
                     <th className="py-2.5 px-3 text-right">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-150 dark:divide-zinc-800 text-zinc-700 dark:text-zinc-350">
                   {filteredAccounts.map(acc => {
                     const isEditing = editingUsername === acc.username;
+
+                    // Chuẩn hóa thành dạng slug URL bằng cách đổi dấu gạch dưới thành gạch ngang
+                    const slugUser = acc.username.toLowerCase().replace(/_/g, '-');
+                    
+                    // URL GitHub Pages được yêu cầu
+                    const ghPagesUrl = `https://huunsbk.github.io/PIC_HUU/${slugUser}`;
+                    
+                    // URL live preview hiện tại sử dụng phân vùng qua hash
+                    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                    let pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+                    if (pathname.endsWith('/') === false && !pathname.includes('.')) {
+                      pathname += '/';
+                    } else if (pathname.includes('.')) {
+                      pathname = pathname.substring(0, pathname.lastIndexOf('/') + 1);
+                    }
+                    const previewUrl = `${origin}${pathname}#/${slugUser}`;
 
                     return (
                       <tr 
@@ -370,6 +397,70 @@ export default function AccountManager() {
                           ) : (
                             acc.tournamentName
                           )}
+                        </td>
+
+                        <td className="py-2 px-3">
+                          <div className="flex flex-col gap-1 min-w-[220px] max-w-[320px]">
+                            {/* GitHub Pages URL */}
+                            <div className="flex items-center justify-between gap-1.5 bg-zinc-50 dark:bg-zinc-950 px-2 py-1 rounded-lg border border-zinc-200/50 dark:border-zinc-800/60 transition-colors hover:border-zinc-300 dark:hover:border-zinc-700">
+                              <div className="flex items-center gap-1.5 min-w-0 truncate">
+                                <span className="text-[9px] font-bold text-white bg-indigo-600 px-1 py-0.2 rounded shrink-0 uppercase tracking-widest scale-90">GH</span>
+                                <span className="font-mono text-[10.5px] select-all truncate text-zinc-650 dark:text-zinc-350">{ghPagesUrl}</span>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => handleCopy(ghPagesUrl, acc.username + '_gh')}
+                                  className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded text-zinc-500 hover:text-indigo-600 transition-colors cursor-pointer"
+                                  title="Sao chép Link GitHub Pages"
+                                >
+                                  {copiedId === acc.username + '_gh' ? (
+                                    <Check size={11} className="text-emerald-600 font-bold" />
+                                  ) : (
+                                    <Copy size={11} />
+                                  )}
+                                </button>
+                                <a 
+                                  href={ghPagesUrl} 
+                                  target="_blank" 
+                                  rel="noreferrer"
+                                  className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded text-zinc-500 hover:text-indigo-600 transition-colors"
+                                  title="Mở trong tab mới"
+                                >
+                                  <ExternalLink size={11} />
+                                </a>
+                              </div>
+                            </div>
+
+                            {/* Live App Link */}
+                            <div className="flex items-center justify-between gap-1.5 bg-zinc-50 dark:bg-zinc-950 px-2 py-1 rounded-lg border border-zinc-200/50 dark:border-zinc-800/60 transition-colors hover:border-zinc-300 dark:hover:border-zinc-700">
+                              <div className="flex items-center gap-1.5 min-w-0 truncate">
+                                <span className="text-[9px] font-bold text-white bg-emerald-600 px-1 py-0.2 rounded shrink-0 uppercase tracking-widest scale-90">Live</span>
+                                <span className="font-mono text-[10.5px] select-all truncate text-zinc-650 dark:text-zinc-350">{previewUrl}</span>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => handleCopy(previewUrl, acc.username + '_live')}
+                                  className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded text-zinc-500 hover:text-emerald-600 transition-colors cursor-pointer"
+                                  title="Sao chép Link xem tức thì"
+                                >
+                                  {copiedId === acc.username + '_live' ? (
+                                    <Check size={11} className="text-emerald-600 font-bold" />
+                                  ) : (
+                                    <Copy size={11} />
+                                  )}
+                                </button>
+                                <a 
+                                  href={previewUrl} 
+                                  target="_blank" 
+                                  rel="noreferrer"
+                                  className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded text-zinc-500 hover:text-emerald-600 transition-colors"
+                                  title="Mở xem trực tiếp"
+                                >
+                                  <ExternalLink size={11} />
+                                </a>
+                              </div>
+                            </div>
+                          </div>
                         </td>
 
                         <td className="py-2 px-3 text-right">
