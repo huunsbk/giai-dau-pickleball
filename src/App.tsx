@@ -36,7 +36,8 @@ import {
   UserCheck,
   ShieldAlert,
   User,
-  Settings
+  Settings,
+  RefreshCw
 } from 'lucide-react';
 
 export default function App() {
@@ -59,6 +60,18 @@ export default function App() {
   } = useTournamentStore();
 
   const [isLoginOpen, setIsLoginOpen] = React.useState(false);
+  const [isDbChanging, setIsDbChanging] = React.useState(false);
+
+  const handleDbChange = async (newId: string) => {
+    setIsDbChanging(true);
+    try {
+      await setTenantId(newId);
+    } catch (e) {
+      console.error("Lỗi khi chuyển đổi CSDL:", e);
+    } finally {
+      setIsDbChanging(false);
+    }
+  };
 
   // Khởi tạo & đồng bộ dữ liệu từ Supabase trực tuyến khi khởi chạy ứng dụng
   // tích hợp tự động nhận diện phân rã dữ liệu (Tenant ID) qua tham số Đường dẫn / Query / Hash trên URL
@@ -280,12 +293,16 @@ export default function App() {
                     </span>
                   )}
                   {userRole === 'admin1' && (
-                    <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-zinc-800 px-2.5 py-0.5 rounded-md text-[10px] border border-[#e2e8f0] dark:border-zinc-700">
-                      <span className="text-zinc-500 font-bold uppercase tracking-wider text-[9px]">Xem CSDL:</span>
+                    <div className={`flex items-center gap-1.5 bg-slate-100 dark:bg-zinc-800 px-2.5 py-0.5 rounded-md text-[10px] border border-[#e2e8f0] dark:border-zinc-700 transition-all ${isDbChanging ? 'opacity-60 animate-pulse' : ''}`}>
+                      <span className="text-zinc-500 font-bold uppercase tracking-wider text-[9px] flex items-center gap-1">
+                        {isDbChanging && <RefreshCw size={10} className="animate-spin text-indigo-500 shrink-0" />}
+                        Xem CSDL:
+                      </span>
                       <select
                         value={activeTenantId}
-                        onChange={(e) => setTenantId(e.target.value)}
-                        className="bg-transparent font-extrabold focus:outline-none text-zinc-950 dark:text-zinc-200 cursor-pointer"
+                        disabled={isDbChanging}
+                        onChange={(e) => handleDbChange(e.target.value)}
+                        className="bg-transparent font-extrabold focus:outline-none text-zinc-950 dark:text-zinc-200 cursor-pointer disabled:cursor-not-allowed"
                       >
                         <option value="default" className="text-black">Mặc định (t-1)</option>
                         {accounts.map(acc => (

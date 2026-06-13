@@ -394,8 +394,17 @@ export const useTournamentStore = create<AppState>()(
   persist(
     (originalSet, get) => {
       const set: typeof originalSet = (nextStateOrFn, replace) => {
+        let hasActualDataChanges = false;
         originalSet((state) => {
           const nextState = typeof nextStateOrFn === 'function' ? (nextStateOrFn as Function)(state) : nextStateOrFn;
+          
+          const dataKeys = [
+            'teams', 'groups', 'matches', 'tournament', 'events', 
+            'currentEventId', 'activeGroupId', 'advanceSelectionMode', 
+            'manualQualifiedTeamIds'
+          ];
+          hasActualDataChanges = Object.keys(nextState || {}).some(key => dataKeys.includes(key));
+
           const mergedState = { ...state, ...nextState };
           
           const activeId = mergedState.currentEventId || 'event-default';
@@ -485,7 +494,7 @@ export const useTournamentStore = create<AppState>()(
 
         // Sync with Supabase on modifications if admin holds active session
         const currentState = get();
-        if (currentState.isAdmin) {
+        if (currentState.isAdmin && hasActualDataChanges) {
           syncStateToSupabase(currentState, originalSet);
         }
       };
