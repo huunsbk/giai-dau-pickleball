@@ -67,14 +67,15 @@ export default function App() {
     try {
       const slugId = newId.replace(/_/g, '-');
       if (newId !== 'default') {
-        window.history.pushState(null, '', `/#/${slugId}`);
+        window.location.href = `/#/${slugId}`;
       } else {
-        window.history.pushState(null, '', '/#/');
+        window.location.href = '/#/';
       }
-      await setTenantId(newId);
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     } catch (e) {
       console.error("Lỗi khi chuyển đổi CSDL:", e);
-    } finally {
       setIsDbChanging(false);
     }
   };
