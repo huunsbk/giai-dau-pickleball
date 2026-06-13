@@ -77,7 +77,7 @@ export default function AuditLogger() {
           </div>
         ) : (
           <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1" id="audit-logs-list">
-            {filteredLogs.slice().reverse().map((log, index) => (
+            {filteredLogs.map((log, index) => (
               <div
                 key={index}
                 className="p-4.5 bg-zinc-55 dark:bg-zinc-955 rounded-xl border border-zinc-100 dark:border-zinc-850 hover:bg-zinc-100/50 dark:hover:bg-zinc-805/30 transition-all flex items-start gap-4"
